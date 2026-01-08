@@ -120,7 +120,7 @@ async def activate_VIP_Handler(access_code: str, user_id: str, update: Update, c
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         await send_VIP_All_Package_Handler(update, context)
-        await update.message.reply_text("✅ <b>Anda Sekarang VIP!</b>",parse_mode="HTML")
+        await update.message.reply_text("✅ <i><b>Anda Sekarang VIP!\nGunakan Menu Baru</b></i>",parse_mode="HTML")
         await set_commands_for_user(context, user_data)
         
     except TimedOut:
