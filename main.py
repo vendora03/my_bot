@@ -24,6 +24,18 @@ from handlers.admin import (
     template_Handler,
     delete_Template_Handler)
 
+from flask import Flask
+from threading import Thread
+
+flask_app = Flask(__name__)
+
+@flask_app.route('/')
+def health_check():
+    return "Bot is running!", 200
+
+def run_flask():
+    # Koyeb secara default membaca port 8080
+    flask_app.run(host='0.0.0.0', port=8080)
 
 async def generate_tip_job(context=None) -> str:
     global TIP
@@ -48,6 +60,10 @@ def main():
     # init database
     init_db()
     
+    print("[SYSTEM] Starting Flask Health Check...")
+    daemon = Thread(target=run_flask, daemon=True)
+    daemon.start()
+
     # init restore backup
     response = restore_Backup_Logic()
     if response:
