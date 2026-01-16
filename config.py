@@ -4,16 +4,6 @@ import datetime,pytz
 
 # load_dotenv()
 
-# ==== SETTINGS 
-SETTINGS_SCHEMA = {
-    "debug": "bool",
-    "start_info_state": "bool",
-    "start_info": "text",
-    "vip_info_state": "bool",
-    "vip_info": "text",
-    "group": "text",
-}
-
 # ===== BASE =====
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
