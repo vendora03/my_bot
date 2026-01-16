@@ -2,13 +2,12 @@ import datetime
 import pytz
 from services.logic import User
 from services.database import DB_Save_User, DB_Get_User
-from config import TIMEZONE, DEBUG
+from config import (
+    # DEBUG, 
+    TIMEZONE)
 
 
 def update_User_Activity_Logic(tg_user):
-    """
-    Update / insert user setiap kali melakukan interaksi
-    """
     user_id = tg_user.id
     first_name = tg_user.first_name
     last_name = tg_user.last_name or ""
@@ -46,7 +45,7 @@ def update_User_Activity_Logic(tg_user):
 
     DB_Save_User(user_model)
 
-    if DEBUG:
-        print(f"[LOGIC] User activity updated: {user_id}")
+    # if DEBUG:
+    #     print(f"[LOGIC] User activity updated: {user_id}")
 
     return user_model

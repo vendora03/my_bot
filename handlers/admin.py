@@ -1,23 +1,30 @@
-import pytz, asyncio
+import pytz, asyncio, logging
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.error import TimedOut, BadRequest
-from config import ADMIN_IDS, DEBUG, BACKUP_PATH, TIMEZONE
-from services.database import DB_Remove_All_VIP
+from services.settings import Settings
+from config import (
+    # DEBUG,
+    ADMIN_IDS, 
+    BACKUP_PATH, 
+    TIMEZONE, 
+    SETTINGS_SCHEMA)
+# from services.database import DB_Remove_All_VIP
 from services.logic import (
+    send_Log_Logic,
+    send_Backup_Logic,
+    format_Help_Logic,
     create_VIP_Code_Logic,
     set_VIP_Variable_Logic,
     get_User_Logic,
     user_Statistic_Logic,
     get_All_User_Logic,
-    backup_Logic,
     restore_Backup_Logic,
     get_Time_Logic,
     assign_Template_Logic,
     do_Broadcast_Logic,
     set_Variable_Logic,
-    get_Daily_Schedule_Logic,
     set_Daily_Schedule_Logic,
     get_All_Daily_Schedule_Logic,
     show_Daily_Schedule_Logic,
@@ -47,14 +54,16 @@ async def user_Statistic_Handler(update: Update, context: ContextTypes.DEFAULT_T
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -62,85 +71,125 @@ async def user_Statistic_Handler(update: Update, context: ContextTypes.DEFAULT_T
                 await msg.delete()
             except BadRequest:
                 pass
- 
-# ====== Backup handler =================== 👌
-async def backup_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+
+# ====== Log handler ====================== 👌
+async def log_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/log]")
             return
 
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 
-        file, info = backup_Logic()
-
-        text = (
-            f"<b>📦 Backup:</b> {get_Time_Logic().strftime('%d-%m-%Y %H:%M:%S')}\n\n"
-            f"Users            : <b>{info.get('users', 0)}</b> row\n"
-            f"Variables       : <b>{info.get('variables', 0)}</b> row\n"
-            f"VIP Codes      : <b>{info.get('vip_codes', 0)}</b> row\n"
-            f"VIP Variables  : <b>{info.get('vip_variables', 0)}</b> row\n"
-            f"Schedule       : <b>{info.get('daily_schedule', 0)}</b> row\n"
-            f"Template       : <b>{info.get('template', 0)}</b> row\n"
-        )
-        await msg.delete()
-        await update.message.reply_document(document=file,caption=text,parse_mode="HTML")
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        await send_Log_Logic(context)
 
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
-
+    
     finally:
         if msg and getattr(msg, "message_id", None):
             try:
                 await msg.delete()
             except BadRequest:
                 pass
+
+# ====== Backup handler =================== 👌
+async def backup_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = None
+    try:
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/backup]")
+            return
+
+        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
+
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        await send_Backup_Logic(context)
+
+    except TimedOut:
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
+        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+
+    except Exception as e:
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
+        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+    
+    finally:
+        if msg and getattr(msg, "message_id", None):
+            try:
+                await msg.delete()
+            except BadRequest:
+                pass
+        await send_Log_Logic(context)
         
 # ====== Restore handler ================== 👌       
 async def restore_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/restore]")
             return
 
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 
         doc = update.message.document
         if not doc or not doc.file_name.endswith(".json"):
-            await msg.delete()
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
             await update.message.reply_text("<i>File backup (.json) tidak valid...</i>", parse_mode="HTML")
 
         file = await doc.get_file()
         await file.download_to_drive(BACKUP_PATH)
 
         response = restore_Backup_Logic()
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         await update.message.reply_text(response or "✅ Restore selesai",parse_mode="HTML")
 
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
+
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -155,9 +204,11 @@ async def do_Broadcast_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
     success = 0
     failed = 0
     try:
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/broadcast]")
             return
 
         if not context.args:
@@ -202,12 +253,14 @@ async def do_Broadcast_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
 async def set_Variable_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Set Variable")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Set Variable")
 
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/setvariable]")
             return
 
         text = update.message.text or update.message.caption or ""
@@ -223,8 +276,8 @@ async def set_Variable_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
         content = parts[1]
         link_access = set_Variable_Logic(content, file_id)
-       
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         await update.message.reply_text("✅ <i>New Variable Saved...</i>", parse_mode="HTML")
         await update.message.reply_text(link_access)
 
@@ -232,14 +285,16 @@ async def set_Variable_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -257,18 +312,22 @@ async def set_Variable_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
 async def set_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Set Daily Schedule")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Set Daily Schedule")
 
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/setdaily]")
             return
 
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         text = update.message.text or update.message.caption or ""
         parts = text.split(maxsplit=1)
         if len(parts) < 2:
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
             await update.message.reply_text("Format: /setdailyschedule <content>")
             return
 
@@ -278,8 +337,9 @@ async def set_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAU
 
         content = parts[1]
         access_code = set_Daily_Schedule_Logic(content, file_id)
-
-        await msg.delete()
+        
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         await update.message.reply_text(f"✅ <i>Task Scheduled Saved...</i>\n└── <code>{access_code}</code>",parse_mode="HTML")
         
         if file_id:
@@ -290,14 +350,16 @@ async def set_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAU
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -308,18 +370,20 @@ async def set_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAU
     
 # ====== Command Daily Scheduler ========== 👌
 async def daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if DEBUG:
-        print("[Handlers] Admin: Daily Schedule")
+    # if DEBUG:
+    #     print("[Handlers] Admin: Daily Schedule")
         
-    user_id = update.effective_user.id
-    text = update.message.text
-    if not is_admin(user_id):
-        await update.message.reply_text("⛔ Kamu bukan admin.")
+    user = update.effective_user
+    if not is_admin(user.id):
+        last_name = user.last_name or ""
+        username = "@" + user.username or ""
+        logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/daily_schedule]")
         return
     
     msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
     
     if not context.args:
+        
         await show_All_Daily_Schedule_Handler(update, context, msg)
         return
     
@@ -329,8 +393,8 @@ async def daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAULT_T
 # ====== Show All Daily Schedule ========== 
 async def show_All_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE, msg):
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Show All Daily Schedule")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Show All Daily Schedule")
 
         row = get_All_Daily_Schedule_Logic()
         if row:
@@ -338,20 +402,24 @@ async def show_All_Daily_Schedule_Handler(update: Update, context: ContextTypes.
             respon = "All Schedule Daily\n\n" + "\n".join(lines)
         else:
             respon = "<i>!!<b>EMPTY SCHEDULE DAILY</b>!!</i>"
-        await msg.delete()
+            
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         await update.message.reply_text(respon, parse_mode="HTML")
 
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -363,11 +431,13 @@ async def show_All_Daily_Schedule_Handler(update: Update, context: ContextTypes.
 # ====== Show Content Daily Schedule ====== 
 async def show_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE, msg, access_code):
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Show Content Daily Schedule")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Show Content Daily Schedule")
 
         respon = show_Daily_Schedule_Logic(access_code)
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+            
         if respon:
             file_id = respon.get("file_id")
             content = respon.get("content")
@@ -382,14 +452,16 @@ async def show_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFA
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -402,12 +474,14 @@ async def show_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFA
 async def delete_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Delete Daily Schedule")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Delete Daily Schedule")
 
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/deletedailyschedule]")
             return
 
         if len(context.args) < 1:
@@ -423,7 +497,9 @@ async def delete_Daily_Schedule_Handler(update: Update, context: ContextTypes.DE
         access_code = context.args[0]
         response = delete_Daily_Schedule_Logic(access_code)
 
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+            
         if response:
             await update.message.reply_text(f"✅ <i>Schedule <b>{access_code}</b> Dihapus...</i>",parse_mode="HTML")
             return
@@ -432,14 +508,16 @@ async def delete_Daily_Schedule_Handler(update: Update, context: ContextTypes.DE
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -459,12 +537,14 @@ async def delete_Daily_Schedule_Handler(update: Update, context: ContextTypes.DE
 async def get_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Get Template")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Get Template")
 
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 
         if len(context.args) < 2:
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
             await update.message.reply_text("Format: /gettemplate <code> <Arg[space]>")
             return
 
@@ -473,25 +553,29 @@ async def get_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
 
         template = get_Template_Logic(access_code)
         if not template:
-            await msg.delete()
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
             await update.message.reply_text(f"❌ <i>Not Found <b>{access_code}</b>...</i>",parse_mode="HTML")
             return
 
         result = assign_Template_Logic(template, values)
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+                await msg.delete()
         await update.message.reply_text(result, parse_mode="HTML")
 
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -504,12 +588,14 @@ async def get_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
 async def set_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Set Template")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Set Template")
 
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/settemplate]")
             return
 
         if len(context.args) < 1:
@@ -523,22 +609,24 @@ async def set_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         content = parts[1]
 
         access_code = set_Template_Logic(content)
-        
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         await update.message.reply_text(f"<i>✅ Template Saved...</i>\n└── <code>{access_code}</code>",parse_mode="HTML")
         await update.message.reply_text(content)
 
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -551,12 +639,14 @@ async def set_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
 async def template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Template")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Template")
 
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/template]")
             return
 
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
@@ -571,14 +661,16 @@ async def template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -590,8 +682,8 @@ async def template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ====== Show All Template ================ 
 async def show_All_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE, msg):
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Show All Template")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Show All Template")
 
         row = get_All_Template_Logic()
         if row:
@@ -599,20 +691,25 @@ async def show_All_Template_Handler(update: Update, context: ContextTypes.DEFAUL
             respon = "All Template\n\n" + "\n".join(lines)
         else:
             respon = "<i>!!<b>EMPTY Template</b>!!</i>"
-        await msg.delete()
+            
+        
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         await update.message.reply_text(respon, parse_mode="HTML")
 
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -624,11 +721,12 @@ async def show_All_Template_Handler(update: Update, context: ContextTypes.DEFAUL
 # ====== Show Content Template ============ 
 async def show_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE, msg, access_code):
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Show Content Template")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Show Content Template")
 
         respon = get_Template_Logic(access_code)
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         if respon:
             await update.message.reply_text(respon)
         else:
@@ -637,14 +735,16 @@ async def show_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TY
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -657,8 +757,8 @@ async def show_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TY
 async def delete_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        if DEBUG:
-            print("[Handlers] Admin: Delete Template")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Delete Template")
 
         user_id = update.effective_user.id
         if not is_admin(user_id):
@@ -678,8 +778,9 @@ async def delete_Template_Handler(update: Update, context: ContextTypes.DEFAULT_
         access_code = context.args[0]
         response = delete_Template_Logic(access_code)
        
-        await msg.delete()
         if response:
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
             await update.message.reply_text(f"✅ <i>Template <b>{access_code}</b> Dihapus...</i>",parse_mode="HTML")
             return
 
@@ -688,14 +789,17 @@ async def delete_Template_Handler(update: Update, context: ContextTypes.DEFAULT_
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
+
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -714,14 +818,15 @@ async def delete_Template_Handler(update: Update, context: ContextTypes.DEFAULT_
 async def create_VIP_Code_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        user_id = update.effective_user.id
-        
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/createVIP]")
             return
         
-        if DEBUG:
-            print("[Handlers] Admin: Create VIP Code")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Create VIP Code")
             
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         result = create_VIP_Code_Logic()
@@ -732,20 +837,23 @@ async def create_VIP_Code_Handler(update: Update, context: ContextTypes.DEFAULT_
             f"🔗 Link: {result['link']}\n\n"
         )
         
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         await update.message.reply_text(message, parse_mode="HTML")
         
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -758,14 +866,15 @@ async def create_VIP_Code_Handler(update: Update, context: ContextTypes.DEFAULT_
 async def set_VIP_Variable_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        user_id = update.effective_user.id
-        
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/setvipvariable]")
             return
         
-        if DEBUG:
-            print("[Handlers] Admin: Set VIP Variable")
+        # if DEBUG:
+        #     print("[Handlers] Admin: Set VIP Variable")
         
         text = update.message.text or update.message.caption or ""
         parts = text.split(maxsplit=1)
@@ -781,7 +890,8 @@ async def set_VIP_Variable_Handler(update: Update, context: ContextTypes.DEFAULT
 
         link_access = set_VIP_Variable_Logic(content, file_id)
         
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         await update.message.reply_text("✅ <i>New Variable Saved...</i>", parse_mode="HTML")
         await update.message.reply_text(link_access)
         
@@ -793,9 +903,9 @@ async def set_VIP_Variable_Handler(update: Update, context: ContextTypes.DEFAULT
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -808,32 +918,35 @@ async def set_VIP_Variable_Handler(update: Update, context: ContextTypes.DEFAULT
 async def list_VIP_Users_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        user_id = update.effective_user.id
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/listvip]")
+            return
         
-        if not is_admin(user_id):
-                await update.message.reply_text("⛔ Kamu bukan admin.")
-                return
-        
-        if DEBUG:
-            print("[Handlers] Admin: List VIP Users")
+        # if DEBUG:
+        #     print("[Handlers] Admin: List VIP Users")
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         users = get_All_User_Logic()
         
         vip_users = [u for u in users if u.get("is_vip", False)]
         
         if not vip_users:
-            await msg.delete()
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
             await update.message.reply_text("📊 <i><b>Belum ada VIP user...</b></i>",parse_mode="HTML")
             return
         
-        await msg.delete()
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         message = f"👑 <b>VIP Users ({len(vip_users)}):</b>\n\n"
         for idx, u in enumerate(vip_users, 1):
             user_info = get_User_Logic(u["user_id"])
             username = user_info.username
             first_name = user_info.first_name
             dt = datetime.strptime(u["vip_created"], "%Y-%m-%d %H:%M:%S")
-            new_date = dt.strftime("%d-%m-%Y %H:%M:%S")
+            new_date = dt.strftime("%H:%M:%S %d-%m-%Y")
             message += f"{idx}. {first_name} (@{username})\n"
             message += f"   ID: <code>{u['user_id']}</code>\n"
             message += f"   Time: <code>{new_date}</code>\n\n"
@@ -849,14 +962,17 @@ async def list_VIP_Users_Handler(update: Update, context: ContextTypes.DEFAULT_T
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
+
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -868,16 +984,16 @@ async def list_VIP_Users_Handler(update: Update, context: ContextTypes.DEFAULT_T
 # <<<<<<<<<<<<< END VIP >>>>>>>>>>>>>>>>>>>
 
 
-async def remove_All_VIP_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
+# async def remove_All_VIP_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     user_id = update.effective_user.id
     
-    if not is_admin(user_id):
-        await update.message.reply_text("❌ Unauthorized")
-        return
-    msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
-    DB_Remove_All_VIP()
-    await msg.delete()
-    await update.message.reply_text("✅ <b>Selesai...</b>", parse_mode="HTML")
+#     if not is_admin(user_id):
+#         await update.message.reply_text("❌ Unauthorized")
+#         return
+#     msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
+#     # DB_Remove_All_VIP()
+#     await msg.delete()
+#     await update.message.reply_text("✅ <b>Selesai...</b>", parse_mode="HTML")
 
 
 
@@ -892,7 +1008,7 @@ async def scheduled_job(context: ContextTypes.DEFAULT_TYPE):
             for admin_id in ADMIN_IDS:
                 await context.bot.send_message(
                     chat_id=admin_id,
-                    text=f"❌ <i>Schedule Tidak Ada Pesan</i>\nTime: {get_Time_Logic().strftime('%d-%m-%Y %H:%M:%S')}",
+                    text=f"❌ <i>Schedule Tidak Ada Pesan</i>\nTime: {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}",
                     parse_mode="HTML"
                 )
             return
@@ -924,17 +1040,22 @@ async def scheduled_job(context: ContextTypes.DEFAULT_TYPE):
     except TimedOut:
         for admin_id in ADMIN_IDS:
             await context.bot.send_message(chat_id=admin_id, text="⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
-
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
     except Exception as e:
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         for admin_id in ADMIN_IDS:
             await context.bot.send_message(chat_id=admin_id, text="❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
         
 async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/schedule]")
             return
 
 
@@ -942,21 +1063,21 @@ async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         parts = text.split(maxsplit=3)
         if len(parts) < 4:
             await update.message.reply_text(
-                "Format: /schedule YYYY-MM-DD HH:MM <pesan>"
+                "Format: /schedule HH:MM DD-MM-YYYY <pesan>"
             )
             return
 
-        date_str = parts[1]
-        time_str = parts[2]
+        time_str = parts[1]
+        date_str = parts[2]
         message_text = parts[3]
         
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 
         tz = pytz.timezone(TIMEZONE)
-        dt_str = f"{date_str} {time_str}"
+        dt_str = f"{time_str} {date_str}"
 
         try:
-            dt = tz.localize(datetime.strptime(dt_str, "%Y-%m-%d %H:%M"))
+            dt = tz.localize(datetime.strptime(dt_str, "%H:%M %d-%m-%Y"))
         except ValueError:
             await msg.delete()
             await update.message.reply_text("❌ Format tanggal salah.\nGunakan: YYYY-MM-DD HH:MM")
@@ -980,9 +1101,9 @@ async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "file_id": file_id
             }
         )
-
-        await msg.delete()
-        await update.message.reply_text(f"✅ <i>Task scheduled at {dt.strftime('%d-%m-%Y %H:%M')}...</i>",parse_mode="HTML")
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        await update.message.reply_text(f"✅ <i>Task scheduled at {dt.strftime('%H:%M %d-%m-%Y')}...</i>",parse_mode="HTML")
 
         if file_id:
             await update.message.reply_photo(photo=file_id, caption=message_text)
@@ -992,14 +1113,16 @@ async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
         await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
-        if DEBUG:
-            print(e)
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -1009,3 +1132,82 @@ async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
 
 
+# <<<<<<<<<<<< START Settings >>>>>>>>>>>>>
+async def settings_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = None
+    try:
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = "@" + user.username or ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/settings]")
+            return
+        
+        # if DEBUG:
+        #     print("[Handlers] Admin: Settings Bot")
+        
+        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")        
+        # if not context.arg:
+        #     if msg and getattr(msg, "message_id", None):
+        #         await msg.delete()
+        #     await update.message.reply_text("Format:\n\n" + await format_Help_Logic())
+        #     return
+        text = update.message.text or update.message.caption or ""
+        parts = text.split(maxsplit=2)
+        
+        if len(parts) <= 1:
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
+            await update.message.reply_text("Format:\n\n" + format_Help_Logic())
+            return
+        
+        key = parts[1]
+        raw_value = parts[2]
+
+        is_valid = (
+            len(parts) >= 2
+            and key in SETTINGS_SCHEMA
+            and (
+                (SETTINGS_SCHEMA[key] == "bool"
+                and raw_value.lower() in ("true", "false"))
+                or
+                (SETTINGS_SCHEMA[key] == "text"
+                and raw_value.strip())
+            )
+        )
+        
+        if not is_valid:
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
+            await update.message.reply_text("Format:\n\n" + format_Help_Logic())
+            return
+
+        value_type = SETTINGS_SCHEMA[key]
+        
+        value = raw_value.lower() if value_type == "bool" else raw_value
+        Settings.set(key, value)
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        await update.message.reply_text(f"✅ <i>Setting <b>`{key}`</b> Saved...</i>",parse_mode="HTML")
+          
+    except TimedOut:
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
+        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+
+    except Exception as e:
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        if Settings.is_logging():
+            logging.error(f"[ERROR] Something Wrong... -> {e}")
+        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+
+    finally:
+        if msg and getattr(msg, "message_id", None):
+            try:
+                await msg.delete()
+            except BadRequest:
+                pass
+# <<<<<<<<<<<< END Settings >>>>>>>>>>>>>>>

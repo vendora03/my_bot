@@ -1,10 +1,18 @@
-import random, string, pytz, json, os
+import random, string, pytz, json, os, logging
 from datetime import datetime, timedelta
 from io import BytesIO
-
-from telegram.error import NetworkError
-from telegram import BotCommand, BotCommandScopeDefault, BotCommandScopeChat
-from config import ADMIN_IDS,API_GEMINI,BACKUP_PATH, DEBUG, TIMEZONE, PROMPT
+from services.settings import Settings
+from telegram.error import NetworkError, TimedOut, BadRequest
+from telegram import BotCommand, BotCommandScopeDefault, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup
+from config import (
+    # DEBUG,
+    ADMIN_IDS, 
+    API_GEMINI, 
+    BACKUP_PATH, 
+    TIMEZONE, 
+    PROMPT, 
+    SETTINGS_SCHEMA,
+    DEFAULT_SETTINGS)
 from services.database import (
     User,
     DB_Get_User,
@@ -36,18 +44,43 @@ from services.database import (
     DB_Get_All_VIP_Contents,
     DB_Get_Latest_VIP_Contents)
 
+
+def init_settings():
+    for key, value in DEFAULT_SETTINGS.items():
+        Settings.set(key, value)
+        
 # <<<<<<<<<< ERROR Handler >>>>>>>>>>>>>>
 async def error_handler(update, context):
     err = context.error
 
-    if isinstance(err, NetworkError):
-        # biarin aja, PTB bakal retry otomatis
+    if isinstance(err, TimedOut):
+        logging.error(f"TimeOut: {err}")
         return
+    
+    if isinstance(err, NetworkError):
+        logging.error(f"Network Issues: {err}")
+        return
+    
+    if Settings.is_logging():
+        logging.info(f"ERROR: {err}")
 
-    print(f"ERROR: {err}")
+def format_Help_Logic():
+    lines = ["format penggunaan:"]
+    for key, t in SETTINGS_SCHEMA.items():
+        if t == "bool":
+            lines.append(f"/setting {key} true|false")
+        else:
+            lines.append(f"/setting {key} <teks>")
+    return "\n".join(lines)
 
 # <<<<<<<<<< START GENERAL >>>>>>>>>>>>>>
 async def on_Startup(app):
+    for id_chat in ADMIN_IDS:
+        await app.bot.send_message(
+            chat_id=id_chat,
+            text=f"🚀 Bot Start Up\nTime: {get_Time_Logic().strftime("%H:%M:%S %d-%m-%Y")}",
+            parse_mode="HTML"
+        )
     await set_Base_User_Commands(app)
 
 async def set_Base_User_Commands(app):
@@ -82,6 +115,8 @@ def build_Commands_User(user: User) -> list[BotCommand]:
 
     ADMIN_COMMANDS = [
         ("userstat", "Cek User Statistic"),
+        ("settings", "Pengaturan Bot"),
+        ("log", "Get Log Data"),
         ("backup", "Backup Database"),
         ("restore", "Restore Database"),
         ("broadcast", "Buat Broadcast"),
@@ -90,7 +125,7 @@ def build_Commands_User(user: User) -> list[BotCommand]:
         
         ("createvipcode", "Buat Kode VIP Baru"),
         ("setvipvariable", "Simpan Konten VIP"),
-        # ("listvip", "List Semua VIP User"),
+        ("listvip", "List Semua VIP User"),
         
         ("setdailyschedule", "Simpan Daily Schedule"),
         ("showdailyschedule", "Tampilkan Daily Schedule"),
@@ -126,10 +161,99 @@ def build_Commands_User(user: User) -> list[BotCommand]:
 
     return commands
  
- 
- 
- 
+def build_Join_Button_Logic():
+    buttons = []
     
+    raw_group = Settings.get_group()  
+    if not raw_group:
+        return None
+    
+    rows = raw_group.split() 
+        
+    for chat_id in rows[1::2]:
+        if chat_id.startswith("https"):
+            buttons.append([
+                InlineKeyboardButton(
+                    f"Join",
+                    url=chat_id
+                )
+            ])
+
+    if not buttons:
+        return None
+    
+    return InlineKeyboardMarkup(buttons)
+
+async def is_user_joined(app, user_id: int, chat_id: str) -> bool:
+    try:
+        member = await app.bot.get_chat_member(chat_id, user_id)
+        return member.status in ("member", "administrator", "creator")
+    except BadRequest:
+        return False
+    
+async def cek_Subscribe_Logic(update, context, user_id) -> bool:
+    if not Settings.start_info_enabled():
+        return True
+
+    raw_group = Settings.get_group()
+    if not raw_group:
+        return True
+
+    groups = raw_group.split()          
+    id_groups = groups[0::2]          
+
+    for id_group in id_groups:
+        if not await is_user_joined(context, user_id, int(id_group)):
+            keyboard = build_Join_Button_Logic()
+
+            await update.message.reply_text(
+                Settings.get_start_info(),
+                reply_markup=keyboard
+            )
+            return False   
+
+    return True
+
+    
+    
+# <<<<<<<<<< START ADMIN >>>>>>>>>>>>>>
+async def send_Log_Logic(context):
+    file = "app.log"
+    
+    if not os.path.exists(file):
+        for admin_id in ADMIN_IDS:
+            await context.bot.send_message(
+                chat_id=admin_id,
+                text= "❌ <i>Gagal mendapat file</i>",
+                parse_mode="HTML")
+        logging.warning("Log file not found")
+        return
+
+    text = (
+        f"<b>📝 Log\nTime:</b> {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
+    )
+    for admin_id in ADMIN_IDS:
+        await context.bot.send_document(chat_id=admin_id,document=file,caption=text,parse_mode="HTML")
+    
+async def send_Backup_Logic(context):
+    file, info = backup_Logic()
+     
+    text = (
+        f"<b>📦 Backup:</b> {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
+        f"Users            : <b>{info.get('users', 0)}</b> row\n"
+        f"Variables       : <b>{info.get('variables', 0)}</b> row\n"
+        f"VIP Codes      : <b>{info.get('vip_codes', 0)}</b> row\n"
+        f"VIP Variables  : <b>{info.get('vip_variables', 0)}</b> row\n"
+        f"Schedule       : <b>{info.get('daily_schedule', 0)}</b> row\n"
+        f"Template       : <b>{info.get('template', 0)}</b> row\n"
+    )
+    file.seek(0)
+    
+    for admin_id in ADMIN_IDS:
+        await context.bot.send_document(chat_id=admin_id,document=file,caption=text,parse_mode="HTML")
+    
+# <<<<<<<<<< END ADMIN >>>>>>>>>>>>>>
+
 
 # ====== Backup To Json Logic =========== 
 def backup_Logic():
@@ -143,7 +267,7 @@ def backup_Logic():
 
     file = BytesIO(json_bytes)
     file.name = "backup.json"
-    
+
     info = {
         "users": len(data.get("users", [])),
         "variables": len(data.get("variables", [])),
@@ -151,6 +275,7 @@ def backup_Logic():
         "vip_variables": len(data.get("vip_variables", [])),
         "daily_schedule": len(data.get("daily_schedule", [])),
         "template": len(data.get("template", [])),
+        "bot_settings": len(data.get("bot_settings", []))
     }
     
     return file,info
@@ -158,8 +283,8 @@ def backup_Logic():
 # ====== Restore Backup Logic =========== 
 def restore_Backup_Logic():
     if not os.path.exists(BACKUP_PATH):
-        if DEBUG:
-            print("[BACKUP] Backup Aborted: Path Not Found")
+        # if DEBUG:
+        #     print("[BACKUP] Backup Aborted: Path Not Found")
         return ""
 
     try:
@@ -222,14 +347,21 @@ def restore_Backup_Logic():
                 content=d["content"],
                 now=d["created_at"]
             )
+            
+        # restore bot_settings          
+        for d in data.get("bot_settings", []):
+            Settings.set(
+                key=d["key"],
+                content=d["value"]
+            )
 
-        if DEBUG:
-            print("[BACKUP] Restore Completed")
+        if Settings.is_logging():
+            logging.info("[BACKUP] Restore Completed")
 
         os.remove(BACKUP_PATH)
 
-        if DEBUG:
-            print("[BACKUP] backup.json Deleted")
+        # if DEBUG:
+        #     print("[BACKUP] backup.json Deleted")
 
         return (
             "✅ <i>Backup Restored:</i>\n\n"
@@ -242,8 +374,8 @@ def restore_Backup_Logic():
         )    
         
     except Exception as e:
-        if DEBUG:
-            print("[BACKUP ERROR] Restore Failed:", e)
+        if Settings.is_logging():
+            logging.error("[BACKUP ERROR] Restore Failed:", e)
         return f"<b>!!!Restored Failed!!!</b>"
     
 # ====== Get Current Time =============== 
@@ -260,8 +392,8 @@ def create_Access_Code(panjang: int) -> str:
     
 # ====== Generate AI Tips =============== 
 def generate_Tip_Logic() -> str:
-    if DEBUG:
-        print("[Logic] Generate Tip")
+    if Settings.is_logging():
+        logging.info("[Logic] Generate Tip")
         
     if not API_GEMINI:
         return "Tidak Ada Tips!"
@@ -280,25 +412,25 @@ def generate_Tip_Logic() -> str:
         kata = tips.split()
         if len(kata) > 5:
             tips = "Tidak Ada Tips!!"
-            if DEBUG:
-                print(f"[Logic] Generate GEMINI: {response.text}")
+            if Settings.is_logging():
+                logging.info(f"[Logic] Generate GEMINI: {response.text}")
         
-        if DEBUG:
-            print(f"[Logic] Generate Success: {tips}")
+        if Settings.is_logging():
+            logging.info(f"[Logic] Generate Success: {tips}")
             
         return tips
     except ClientError as e:
         # 'ClientError' object has no attribute 'status_code'
         if e.status_code == 429:  
             print("Rate limit reached, retrying...")
-        if DEBUG:
-            print(f"[Logic] Generate Failed!!!")
+        if Settings.is_logging():
+            logging.error(f"[Logic] Generate Failed!!!")
         return "Tidak Ada Tips!!!"
     
 # ====== [ADM] Call Broadcast =========== 
 def do_Broadcast_Logic():
-    if DEBUG:
-        print("[Logic] Admin: Do Broadcast")
+    # if DEBUG:
+    #     print("[Logic] Admin: Do Broadcast")
         
     return get_All_User_Logic()
 
@@ -311,21 +443,21 @@ def do_Broadcast_Logic():
 
 # ====== Save User ====================== 
 def set_User_Logic(user_model: User):
-    if DEBUG:
-        print("[Logic] Admin: Set User")
+    # if DEBUG:
+    #     print("[Logic] Admin: Set User")
         
     DB_Save_User(user_model)
     return
 
 def get_User_Logic(user_id: str) -> User:
-    if DEBUG:
-        print("[Logic] Admin: Get User")
+    # if DEBUG:
+    #     print("[Logic] Admin: Get User")
         
     return DB_Get_User(user_id)
 
 def get_All_User_Logic():
-    if DEBUG:
-        print("[Logic] Admin: Get All User")
+    # if DEBUG:
+    #     print("[Logic] Admin: Get All User")
         
     return DB_Get_All_User()
 
@@ -341,7 +473,6 @@ def user_Statistic_Logic(users: list[dict]) -> str:
         last_active = u["last_active"]
         created_at = u.get("created_at")
 
-        # sqlite kadang return string
         if isinstance(last_active, str):
             last_active = datetime.fromisoformat(last_active)
 
@@ -350,7 +481,6 @@ def user_Statistic_Logic(users: list[dict]) -> str:
 
         delta = now - last_active
 
-        # 1️⃣ banned (prioritas tertinggi)
         if not is_active:
             banned += 1
             continue
@@ -399,8 +529,8 @@ def user_Statistic_Logic(users: list[dict]) -> str:
 
 # ====== Save Variable ================== 
 def set_Variable_Logic(content: str, file_id: str) -> str:
-    if DEBUG:
-        print("[Logic] Admin: Set Variable")
+    # if DEBUG:
+    #     print("[Logic] Admin: Set Variable")
         
     index = DB_Cek_Index_Variable() // 100
     
@@ -418,8 +548,8 @@ def set_Variable_Logic(content: str, file_id: str) -> str:
 
 # ====== [ADM] Get Content Variable ===== 
 def get_Content_Logic(access_code: str) -> str:
-    if DEBUG:
-        print("[Logic] Get Content")
+    # if DEBUG:
+    #     print("[Logic] Get Content")
         
     return DB_Get_Content(access_code)
 
@@ -431,8 +561,8 @@ def get_Content_Logic(access_code: str) -> str:
 
 # ====== Save Daily Schedule ============ 
 def set_Daily_Schedule_Logic(content: str, file_id: str) -> str:
-    if DEBUG:
-        print("[Logic] Admin: Set Daily Schedule")
+    # if DEBUG:
+    #     print("[Logic] Admin: Set Daily Schedule")
     max_attempts = 1000  
 
     for _ in range(max_attempts):
@@ -445,27 +575,27 @@ def set_Daily_Schedule_Logic(content: str, file_id: str) -> str:
     
 # ====== [Auto] Get Daily Schedule ====== 
 def get_Daily_Schedule_Logic():
-    if DEBUG:
-        print("[Logic] Bot: Get Daily Schedule")
+    # if DEBUG:
+    #     print("[Logic] Bot: Get Daily Schedule")
 
     return DB_Get_Daily_Schedule()    
 
 # ====== [ADM] Get All Daily Schedule === 
 def get_All_Daily_Schedule_Logic():
-    if DEBUG:
-        print("[Logic] Get All Daily Schedule")
+    # if DEBUG:
+    #     print("[Logic] Get All Daily Schedule")
     return DB_All_Get_Daily_Schedule()
 
 # == [ADM] Show Content Daily Schedule == 
 def show_Daily_Schedule_Logic(access_code):
-    if DEBUG:
-        print("[Logic] Show Content Daily Schedule")
+    # if DEBUG:
+    #     print("[Logic] Show Content Daily Schedule")
     return DB_Show_Daily_Schedule(access_code)
 
 # ====== [ADM] Delete Daily Schedule ==== 
 def delete_Daily_Schedule_Logic(access_code):
-    if DEBUG:
-        print("[Logic] Delete Daily Schedule")
+    # if DEBUG:
+    #     print("[Logic] Delete Daily Schedule")
     return DB_Remove_Daily_Schedule(access_code)
 
 # <<<<<<<< END DAILY SCHEDULE >>>>>>>>>>>
@@ -476,6 +606,8 @@ def delete_Daily_Schedule_Logic(access_code):
 
 # ====== [LOGIC] Assign Template ========    
 def assign_Template_Logic(template:str,args: list[str]) -> str:
+    # if DEBUG:
+    #     print("[Logic] Assign Template")
     var_count = template.count("<var>")   
     if var_count == 0:
         return "❓ <i>Template Tidak Ada (var)...</i>"
@@ -490,8 +622,8 @@ def assign_Template_Logic(template:str,args: list[str]) -> str:
 
 # ====== [LOGIC] Save Template ========== 
 def set_Template_Logic(content: str):
-    if DEBUG:
-        print("[Logic] Admin: Set Template")
+    # if DEBUG:
+    #     print("[Logic] Admin: Set Template")
     
     max_attempts = 1000  
 
@@ -505,21 +637,21 @@ def set_Template_Logic(content: str):
     
 # ====== [LOGIC] Get Template =========== 
 def get_Template_Logic(access_code):
-    if DEBUG:
-        print("[Logic] Bot: Get Template")
+    # if DEBUG:
+    #     print("[Logic] Bot: Get Template")
 
     return DB_Get_Template(access_code)    
 
 # ====== [LOGIC] Get All Template ======= 
 def get_All_Template_Logic():
-    if DEBUG:
-        print("[Logic] Get All Template")
+    # if DEBUG:
+    #     print("[Logic] Get All Template")
     return DB_All_Get_Template()
 
 # ====== [LOGIC] Delete Template ======== 
 def delete_Template_Logic(access_code):
-    if DEBUG:
-        print("[Logic] Delete Template")
+    # if DEBUG:
+    #     print("[Logic] Delete Template")
     return DB_Remove_Template(access_code)
 
 # <<<<<<<<<<< END TEMPLATE >>>>>>>>>>>>>>
@@ -529,14 +661,14 @@ def delete_Template_Logic(access_code):
 # <<<<<<<<<< START TEMPLATE >>>>>>>>>>>>>
 # ====== [LOGIC] Create VIP Access Code ====
 def create_VIP_Code_Logic() -> str:
-    if DEBUG:
-        print("[Logic] Admin: Create VIP Code")
+    # if DEBUG:
+    #     print("[Logic] Admin: Create VIP Code")
     
     max_attempts = 1000
     
     for _ in range(max_attempts):
-        random_text = create_Access_Code(11)  # 11 karakter random
-        access_code = f"NV1Px{random_text}"  # Total 16 karakter dengan prefix
+        random_text = create_Access_Code(11)  
+        access_code = f"NV1Px{random_text}"  
         
         if not DB_Check_VIP_Code(access_code):
             break
@@ -553,10 +685,9 @@ def create_VIP_Code_Logic() -> str:
 
 # ====== [LOGIC] Activate VIP for User =====
 def activate_VIP_Logic(access_code: str, user_id: str, now):
-    if DEBUG:
-        print(f"[Logic] Activate VIP for user: {user_id}")
+    if Settings.is_logging():
+        logging.info(f"[Logic] Activate VIP for user: {user_id}")
     
-    # Check if code exists and valid
     vip_code = DB_Check_VIP_Code(access_code)
     
     if not vip_code:
@@ -579,25 +710,22 @@ def activate_VIP_Logic(access_code: str, user_id: str, now):
     
     # Get user info for notification
     user_data = get_User_Logic(user_id)
-    username = user_data.username
     
-    if DEBUG:
-        print(f"[Logic] VIP activated for: {username} ({user_id})")
+    if Settings.is_logging():
+        logging.info(f"[Logic] VIP activated for: {user_data.first_name}(@{user_data.username}) ({user_id})")
     
     return {
         "success": True,
-        "message": "✅ <b>Anda VIP!</b>",
-        "user_id": user_id,
-        "username": username
+        "message": f"🎉 <b>Selamat {user_data.first_name} Kamu VIP!\nKamu mendapatkan command baru</b>",
     }
   
 # ====== [LOGIC] Get All VIP ===============        
 def get_All_VIP_Contents_Logic():
-    if DEBUG:
-        print("[Logic] Get VIP Welcome Package")
+    # if DEBUG:
+    #     print("[Logic] Get VIP Welcome Package")
     
     contents = DB_Get_All_VIP_Contents()
-    
+
     if not contents:
         return []
     
@@ -605,8 +733,8 @@ def get_All_VIP_Contents_Logic():
 
 # ====== [LOGIC] Get Latest VIP  ===========      
 def get_Latest_VIP_Contents_Logic():
-    if DEBUG:
-        print("[Logic] Get VIP Welcome Package")
+    # if DEBUG:
+    #     print("[Logic] Get VIP Welcome Package")
     
     contents = DB_Get_Latest_VIP_Contents()
     
@@ -617,14 +745,14 @@ def get_Latest_VIP_Contents_Logic():
 
 # ====== [LOGIC] Save VIP Variable =========
 def set_VIP_Variable_Logic(content: str, file_id: str) -> str:
-    if DEBUG:
-        print("[Logic] Admin: Set VIP Variable")
+    # if DEBUG:
+    #     print("[Logic] Admin: Set VIP Variable")
     
     max_attempts = 1000
     
     for _ in range(max_attempts):
-        random_text = create_Access_Code(11)  # 11 karakter random
-        access_code = f"VV1Px{random_text}"  # Total 16 karakter dengan prefix
+        random_text = create_Access_Code(11)  
+        access_code = f"VV1Px{random_text}"  
         
         if not DB_Check_VIP_Variable(access_code):
             break
@@ -637,37 +765,15 @@ def set_VIP_Variable_Logic(content: str, file_id: str) -> str:
     return link
 
 # ====== [LOGIC] Get VIP Content ===========
-def get_VIP_Content_Logic(access_code: str, user_id: str):
-    if DEBUG:
-        print("[Logic] Get VIP Content")
+def get_VIP_Content_Logic(access_code: str):
+    # if DEBUG:
+    #     print("[Logic] Get VIP Content")
     
-    # Check if user is VIP
-    user_data = get_User_Logic(user_id)
-    is_vip = user_data.is_vip
-    
-    if not is_vip:
-        return {
-            "success": False,
-            "is_vip_content": True,
-            "message": (
-                "🔒 <b>Konten VIP</b>\n\n"
-                "Konten ini hanya tersedia untuk member VIP.\n\n"
-                "💎 <b>Keuntungan VIP:</b>\n"
-                "• Akses ke semua konten eksklusif\n"
-                "• Update konten premium setiap hari\n"
-                "• Prioritas support\n\n"
-                "💰 <b>Harga VIP:</b> Rp 50.000/bulan\n\n"
-                "Hubungi admin untuk upgrade ke VIP!"
-            )
-        }
-    
-    # User is VIP, get content
     content_data = DB_Get_VIP_Content(access_code)
     
     if not content_data:
         return {
             "success": False,
-            "is_vip_content": False,
             "message": "❌ <i><b>Not Found...</b></i>"
         }
     
