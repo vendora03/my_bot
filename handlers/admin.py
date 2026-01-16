@@ -79,7 +79,7 @@ async def log_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/log]")
             return
 
@@ -117,7 +117,7 @@ async def backup_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/backup]")
             return
 
@@ -126,7 +126,7 @@ async def backup_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         await send_Backup_Logic(context)
-
+        await send_Log_Logic(context)
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
@@ -147,7 +147,7 @@ async def backup_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await msg.delete()
             except BadRequest:
                 pass
-        await send_Log_Logic(context)
+       
         
 # ====== Restore handler ================== 👌       
 async def restore_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -156,7 +156,7 @@ async def restore_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/restore]")
             return
 
@@ -207,7 +207,7 @@ async def do_Broadcast_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/broadcast]")
             return
 
@@ -259,7 +259,7 @@ async def set_Variable_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/setvariable]")
             return
 
@@ -318,7 +318,7 @@ async def set_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAU
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/setdaily]")
             return
 
@@ -376,7 +376,7 @@ async def daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAULT_T
     user = update.effective_user
     if not is_admin(user.id):
         last_name = user.last_name or ""
-        username = "@" + user.username or ""
+        username = f"(@{user.username})" if user.username else ""
         logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/daily_schedule]")
         return
     
@@ -480,7 +480,7 @@ async def delete_Daily_Schedule_Handler(update: Update, context: ContextTypes.DE
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/deletedailyschedule]")
             return
 
@@ -594,7 +594,7 @@ async def set_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/settemplate]")
             return
 
@@ -645,7 +645,7 @@ async def template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/template]")
             return
 
@@ -821,7 +821,7 @@ async def create_VIP_Code_Handler(update: Update, context: ContextTypes.DEFAULT_
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/createVIP]")
             return
         
@@ -869,7 +869,7 @@ async def set_VIP_Variable_Handler(update: Update, context: ContextTypes.DEFAULT
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/setvipvariable]")
             return
         
@@ -921,7 +921,7 @@ async def list_VIP_Users_Handler(update: Update, context: ContextTypes.DEFAULT_T
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/listvip]")
             return
         
@@ -1054,7 +1054,7 @@ async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/schedule]")
             return
 
@@ -1139,7 +1139,7 @@ async def settings_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user = update.effective_user
         if not is_admin(user.id):
             last_name = user.last_name or ""
-            username = "@" + user.username or ""
+            username = f"(@{user.username})" if user.username else ""
             logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/settings]")
             return
         

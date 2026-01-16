@@ -78,7 +78,7 @@ async def on_Startup(app):
     for id_chat in ADMIN_IDS:
         await app.bot.send_message(
             chat_id=id_chat,
-            text=f"🚀 Bot Start Up\nTime: {get_Time_Logic().strftime("%H:%M:%S %d-%m-%Y")}",
+            text=f"🚀 Bot Start Up\nTime: {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}",
             parse_mode="HTML"
         )
     await set_Base_User_Commands(app)
