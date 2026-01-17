@@ -3,8 +3,10 @@ from telegram.ext import ContextTypes
 from telegram.error import TimedOut, BadRequest
 from services.update_user import update_User_Activity_Logic
 from services.logic import (
-    send_Backup_Logic,
+    setup_Backup_Logic,
     send_Log_Logic,
+    send_Backup_To_Admin_Logic,
+    send_Backup_To_Channel_Logic,
     cek_Subscribe_Logic,
     set_commands_for_user,
     get_Time_Logic,
@@ -180,8 +182,10 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
         await send_VIP_All_Package_Handler(update, context)
         await update.message.reply_text("✅ <i><b>Anda Sekarang VIP!\nGunakan Menu Baru</b></i>",parse_mode="HTML")
         await set_commands_for_user(context, user_data)
-        await send_Backup_Logic(context)
+        file, info = setup_Backup_Logic()
+        await send_Backup_To_Admin_Logic(context, file, info)
         await send_Log_Logic(context)
+        await send_Backup_To_Channel_Logic(context, file, info)
         
     except TimedOut:
         if msg and getattr(msg, "message_id", None):

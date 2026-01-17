@@ -12,8 +12,10 @@ from config import (
     SETTINGS_SCHEMA)
 # from services.database import DB_Remove_All_VIP
 from services.logic import (
+    setup_Backup_Logic,
     send_Log_Logic,
-    send_Backup_Logic,
+    send_Backup_To_Admin_Logic,
+    send_Backup_To_Channel_Logic,
     format_Help_Logic,
     create_VIP_Code_Logic,
     set_VIP_Variable_Logic,
@@ -33,10 +35,7 @@ from services.logic import (
     get_All_Template_Logic,
     get_Template_Logic,
     delete_Template_Logic)
-
-
-
-
+        
 # ====== Cek Admin ======================== 
 def is_admin(user_id: int) -> bool:
     return user_id in ADMIN_IDS
@@ -125,8 +124,10 @@ async def backup_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
-        await send_Backup_Logic(context)
+        file, info = setup_Backup_Logic()
+        await send_Backup_To_Admin_Logic(context, file, info)
         await send_Log_Logic(context)
+        send_Backup_To_Channel_Logic(context, file, info)
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()

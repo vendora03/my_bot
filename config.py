@@ -12,6 +12,7 @@ SETTINGS_SCHEMA = {
     "vip_info_state": "bool",
     "vip_info": "text",
     "group": "text",
+    "tip": "text",
 }
 
 # ===== BASE =====
@@ -47,9 +48,6 @@ BACKUP_PATH = os.getenv(
 # ===== PROMPT ======
 PROMPT = os.getenv("GEMINi")
 
-# ===== TIP ======
-TIP = "Tidak Ada Tips"
-
 DEBUG = False
 
 # ==== GET SETTINGS ====
@@ -59,6 +57,8 @@ START_INFO = "HI @user\nKamu Belum bergabung Nih\nGabung Terlebih dahulu sebelum
 VIP_INFO_STATE = os.getenv("DAILY_UPDATE", "false").lower() 
 VIP_INFO = "Content Locked\nAkses Content Dengan VIP\n\n-Langsung Nonton\n-Akses All Konten\n\n"
 GROUP = os.getenv("GROUP", "")
+TIPS = os.getenv("TIPS","Tidak Ada Tips")
+
 
 # ==== SET SETTINGS ====
 DEFAULT_SETTINGS = {
@@ -68,6 +68,7 @@ DEFAULT_SETTINGS = {
     "vip_info_state": VIP_INFO_STATE,
     "vip_info": VIP_INFO,
     "group": GROUP,
+    "tips": TIPS,
 }
 
 # ===== ADMIN ID =======
@@ -77,3 +78,6 @@ ADMIN_IDS = (
     if _admin_ids
     else []
 )
+
+# ===== ADMIN ID =======
+CHANNEL_ID = os.getenv("CHANNEL_ID", "")

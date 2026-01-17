@@ -11,8 +11,11 @@ from services.logic import (
     restore_Backup_Logic,
     generate_Tip_Logic,
     # get_Daily_Schedule_Logic,
-    send_Backup_Logic,
-    send_Log_Logic)
+    setup_Backup_Logic,
+    send_Backup_To_Admin_Logic,
+    send_Backup_To_Channel_Logic,
+    send_Log_Logic,
+    backup_to_channel_job)
 from handlers.user import (
     user_Start_Handler,
     ping_Handler,
@@ -21,7 +24,7 @@ from handlers.user import (
 from config import (
     # DEBUG, 
     BOT_TOKEN, 
-    TIP, 
+    TIPS, 
     ADMIN_IDS, 
     TIMEZONE)
 from handlers.admin import (
@@ -62,10 +65,10 @@ import logging
 #     flask_app.run(host='0.0.0.0', port=8080)
 
 async def generate_tip_job(context=None) -> str:
-    global TIP
-    TIP = generate_Tip_Logic()
+    tips = generate_Tip_Logic()
+    Settings.set("tips", tips)
     if Settings.is_logging():
-        logging.info(f"[BOT] TIP updated: {TIP}")
+        logging.info(f"[BOT] TIP updated: {tips}")
         
 async def daily_Task(context):
     # content = get_Daily_Schedule_Logic()
@@ -78,9 +81,13 @@ async def daily_Task(context):
     #     if Settings.is_logging():
     #         logging.info("[Bot] Empty Daily Schedule!!!")
     
-    await send_Backup_Logic(context)
+    file, info = setup_Backup_Logic()  
+    
+    await send_Backup_To_Admin_Logic(context, file, info)
     waktu.sleep(0.2)
     await send_Log_Logic(context)
+    waktu.sleep(0.2)
+    await send_Backup_To_Channel_Logic(context, file, info)
     
 def main():
     AppLogger.setup()
@@ -91,12 +98,9 @@ def main():
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("telegram").setLevel(logging.INFO)
     
-    global TIP
     if not BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN belum diset")
 
- 
-    
     # print("[SYSTEM] Starting Flask Health Check...")
     # daemon = Thread(target=run_flask, daemon=True)
     # daemon.start()
@@ -107,9 +111,8 @@ def main():
         if Settings.is_logging:
             logging.info(response.replace("<b>","").replace("</b>",""))
 
-    if TIP == "Tidak Ada Tips":
-        # TIP = generate_Tip_Logic()
-        TIP = "Minum air cukup"
+    if TIPS == "Tidak Ada Tips":
+        TIPS = generate_Tip_Logic()
         
     if Settings.is_logging():
         logging.info("[BOT] Starting in DEBUG mode (long polling)")
@@ -154,7 +157,8 @@ def main():
     app.add_handler(CommandHandler("deletetemplate",delete_Template_Handler))
     app.add_error_handler(error_handler)
 
-    app.job_queue.run_repeating(generate_tip_job, interval=216000)
+    # app.job_queue.run_repeating(generate_tip_job, interval=216000)
+    app.job_queue.run_repeating(backup_to_channel_job, interval=3600)
     
     tz = pytz.timezone(TIMEZONE)
     scheduled_time = time(hour=0, minute=1, tzinfo=tz)  

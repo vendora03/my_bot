@@ -7,6 +7,7 @@ from telegram import BotCommand, BotCommandScopeDefault, BotCommandScopeChat, In
 from config import (
     # DEBUG,
     ADMIN_IDS, 
+    CHANNEL_ID,
     API_GEMINI, 
     BACKUP_PATH, 
     TIMEZONE, 
@@ -235,28 +236,103 @@ async def send_Log_Logic(context):
     for admin_id in ADMIN_IDS:
         await context.bot.send_document(chat_id=admin_id,document=file,caption=text,parse_mode="HTML")
     
-async def send_Backup_Logic(context):
-    file, info = backup_Logic()
-     
-    text = (
-        f"<b>📦 Backup:</b> {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
-        f"Users            : <b>{info.get('users', 0)}</b> row\n"
-        f"Variables       : <b>{info.get('variables', 0)}</b> row\n"
-        f"VIP Codes      : <b>{info.get('vip_codes', 0)}</b> row\n"
-        f"VIP Variables  : <b>{info.get('vip_variables', 0)}</b> row\n"
-        f"Schedule       : <b>{info.get('daily_schedule', 0)}</b> row\n"
-        f"Template       : <b>{info.get('template', 0)}</b> row\n"
-    )
+async def send_Backup_To_Admin_Logic(context, file, info):
     file.seek(0)
     
     for admin_id in ADMIN_IDS:
-        await context.bot.send_document(chat_id=admin_id,document=file,caption=text,parse_mode="HTML")
+        try:
+            await context.bot.send_document(
+                chat_id=admin_id,
+                document=file,
+                caption=info,
+                parse_mode="HTML"
+            )
+            logging.info(f"[BACKUP] Sent to admin {admin_id}")
+        except Exception as e:
+            logging.error(f"[BACKUP] Failed to send to admin {admin_id}: {e}")
+        
+        file.seek(0)
+    
+async def send_Backup_To_Channel_Logic(context, file, info):
+    if not CHANNEL_ID:
+        for admin_id in ADMIN_IDS:
+            await context.bot.send_message(
+                chat_id=admin_id,
+                text=f"❌ <i>Channel Database Not Found...</i>",
+                parse_mode="HTML"
+            )
+        logging.warning("[BACKUP] CHANNEL_ID not set, skip channel backup")
+
+    file.seek(0)
+    
+    try:
+        msg = await context.bot.send_document(
+            chat_id=CHANNEL_ID,
+            document=file,
+            caption=info,
+            parse_mode="HTML"
+        )
+        
+        await context.bot.pin_chat_message(
+            chat_id=CHANNEL_ID,
+            message_id=msg.message_id,
+            disable_notification=True  
+        )
+        logging.info(f"[BACKUP] Sent to channel and pinned")
+        
+    except Exception as e:
+        logging.error(f"[BACKUP] Failed to send to channel: {e}")
+        
+async def restore_From_Channel_Pin_Logic(app):
+    if not CHANNEL_ID:
+        for admin_id in ADMIN_IDS:
+            await app.bot.send_message(
+                chat_id=admin_id,
+                text=f"❌ <i>Channel Database Not Found...</i>",
+                parse_mode="HTML"
+            )
+        logging.warning("[BACKUP] CHANNEL_ID not set, skip channel backup")
+    
+    try:
+        chat = await app.bot.get_chat(CHANNEL_ID)
+        
+        if not chat.pinned_message:
+            logging.warning("[RESTORE] No pinned message in channel")
+            return
+        
+        pinned_msg = chat.pinned_message
+        
+        if not pinned_msg.document:
+            logging.warning("[RESTORE] Pinned message has no document")
+            return
+        
+        file_id = pinned_msg.document.file_id
+        new_file = await app.bot.get_file(file_id)
+        
+        await new_file.download_to_drive(BACKUP_PATH)
+        
+        result = restore_Backup_Logic()
+                
+        if result:
+            logging.info("[RESTORE] Database restored successfully")
+            for admin_id in ADMIN_IDS:
+                await app.bot.send_message(
+                    chat_id=admin_id,
+                    text=result,
+                    parse_mode="HTML"
+                )
+    except Exception as e:
+        logging.error(f"[RESTORE] Failed To Restore Backup From Channel: {e}")
+
+async def backup_to_channel_job(context):
+    file, info = setup_Backup_Logic()
+    await send_Backup_To_Channel_Logic(context, file, info)
     
 # <<<<<<<<<< END ADMIN >>>>>>>>>>>>>>
 
 
 # ====== Backup To Json Logic =========== 
-def backup_Logic():
+def setup_Backup_Logic():
     data = DB_Backup()
 
     json_bytes = json.dumps(
@@ -267,16 +343,17 @@ def backup_Logic():
 
     file = BytesIO(json_bytes)
     file.name = "backup.json"
-
-    info = {
-        "users": len(data.get("users", [])),
-        "variables": len(data.get("variables", [])),
-        "vip_codes": len(data.get("vip_codes", [])),
-        "vip_variables": len(data.get("vip_variables", [])),
-        "daily_schedule": len(data.get("daily_schedule", [])),
-        "template": len(data.get("template", [])),
-        "bot_settings": len(data.get("bot_settings", []))
-    }
+    
+    info = (
+        f"<b>📦 Backup:</b> {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
+        f"Users            : <b>{len(data.get("users", []))}</b> row\n"
+        f"Variables       : <b>{len(data.get("variables", []))}</b> row\n"
+        f"VIP Codes      : <b>{len(data.get("vip_codes", []))}</b> row\n"
+        f"VIP Variables  : <b>{len(data.get("vip_variables", []))}</b> row\n"
+        f"Schedule       : <b>{len(data.get("daily_schedule", []))}</b> row\n"
+        f"Template       : <b>{len(data.get("template", []))}</b> row\n"
+        f"Bot Settings   : <b>{len(data.get("bot_settings", []))}</b> row\n"
+    )
     
     return file,info
 
@@ -393,10 +470,10 @@ def create_Access_Code(panjang: int) -> str:
 # ====== Generate AI Tips =============== 
 def generate_Tip_Logic() -> str:
     if Settings.is_logging():
-        logging.info("[Logic] Generate Tip")
+        logging.info("[Logic] Generate Tips")
         
     if not API_GEMINI:
-        return "Tidak Ada Tips!"
+        return "Tidak Ada Tips!!!"
         
     from google import genai
     from google.genai.errors import ClientError
@@ -411,21 +488,20 @@ def generate_Tip_Logic() -> str:
         tips = response.text
         kata = tips.split()
         if len(kata) > 5:
-            tips = "Tidak Ada Tips!!"
+            tips = "Tidak Ada Tips"
             if Settings.is_logging():
-                logging.info(f"[Logic] Generate GEMINI: {response.text}")
+                logging.info(f"[Logic] To Long Generate GEMINI: {response.text}")
         
         if Settings.is_logging():
             logging.info(f"[Logic] Generate Success: {tips}")
             
         return tips
     except ClientError as e:
-        # 'ClientError' object has no attribute 'status_code'
         if e.status_code == 429:  
             print("Rate limit reached, retrying...")
         if Settings.is_logging():
             logging.error(f"[Logic] Generate Failed!!!")
-        return "Tidak Ada Tips!!!"
+        return "Tidak Ada Tips!!"
     
 # ====== [ADM] Call Broadcast =========== 
 def do_Broadcast_Logic():
