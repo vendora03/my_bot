@@ -51,15 +51,15 @@ from services.logger import AppLogger
 import logging
 
 
-flask_app = Flask(__name__)
+# flask_app = Flask(__name__)
 
 
-@flask_app.route('/')
-def health_check():
-    return "Bot is running!", 200
+# @flask_app.route('/')
+# def health_check():
+#     return "Bot is running!", 200
 
-def run_flask():
-    flask_app.run(host='0.0.0.0', port=8080)
+# def run_flask():
+#     flask_app.run(host='0.0.0.0', port=8080)
 
 async def generate_tip_job(context=None) -> str:
     global TIP
@@ -97,9 +97,9 @@ def main():
 
  
     
-    print("[SYSTEM] Starting Flask Health Check...")
-    daemon = Thread(target=run_flask, daemon=True)
-    daemon.start()
+    # print("[SYSTEM] Starting Flask Health Check...")
+    # daemon = Thread(target=run_flask, daemon=True)
+    # daemon.start()
 
     # init restore backup
     response = restore_Backup_Logic()
@@ -162,6 +162,7 @@ def main():
     
     if Settings.is_logging():
         logging.info("[BOT] Bot Running...")
+        print("[BOT] Bot Running...")
     
     app.run_polling()
 
