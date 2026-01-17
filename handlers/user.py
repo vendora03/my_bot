@@ -20,8 +20,7 @@ from config import (
     # DEBUG,
     ADMIN_IDS, 
     START_TIME, 
-    TIMEZONE, 
-    TIP)
+    TIMEZONE)
 from services.settings import Settings
 import datetime, pytz, time, logging
 
