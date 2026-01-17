@@ -12,7 +12,7 @@ SETTINGS_SCHEMA = {
     "vip_info_state": "bool",
     "vip_info": "text",
     "group": "text",
-    "tip": "text",
+    "tips": "text",
 }
 
 # ===== BASE =====
