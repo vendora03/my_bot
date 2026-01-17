@@ -1,5 +1,5 @@
 import pytz
-import time as waktu
+import time as waktu, config
 from datetime import time
 from telegram.ext import Application,CommandHandler,MessageHandler, filters
 from services.settings import Settings
@@ -111,8 +111,8 @@ def main():
         if Settings.is_logging:
             logging.info(response.replace("<b>","").replace("</b>",""))
 
-    if TIPS == "Tidak Ada Tips":
-        TIPS = generate_Tip_Logic()
+    if Settings.get("tips","") == "Tidak Ada Tips":
+        Settings.set("tips",generate_Tip_Logic())
         
     if Settings.is_logging():
         logging.info("[BOT] Starting in DEBUG mode (long polling)")
@@ -157,7 +157,7 @@ def main():
     app.add_handler(CommandHandler("deletetemplate",delete_Template_Handler))
     app.add_error_handler(error_handler)
 
-    # app.job_queue.run_repeating(generate_tip_job, interval=216000)
+    app.job_queue.run_repeating(generate_tip_job, interval=216000)
     app.job_queue.run_repeating(backup_to_channel_job, interval=3600)
     
     tz = pytz.timezone(TIMEZONE)
