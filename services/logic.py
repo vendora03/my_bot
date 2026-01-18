@@ -430,7 +430,7 @@ def restore_Backup_Logic():
         for d in data.get("bot_settings", []):
             Settings.set(
                 key=d["key"],
-                content=d["value"]
+                value=d["value"]
             )
 
         if Settings.is_logging():
