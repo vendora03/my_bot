@@ -347,13 +347,13 @@ def setup_Backup_Logic():
     
     info = (
         f"<b>📦 Backup:</b> {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
-        f"Users            : <b>{len(data.get('users', []))}</b> row\n"
-        f"Variables       : <b>{len(data.get('variables', []))}</b> row\n"
-        f"VIP Codes      : <b>{len(data.get('vip_codes', []))}</b> row\n"
-        f"VIP Variables  : <b>{len(data.get('vip_variables', []))}</b> row\n"
-        f"Schedule       : <b>{len(data.get('daily_schedule', []))}</b> row\n"
-        f"Template       : <b>{len(data.get('template', []))}</b> row\n"
-        f"Bot Settings   : <b>{len(data.get('bot_settings', []))}</b> row\n"
+        f"Users: <b>{len(data.get('users', []))}</b> row\n"
+        f"Schedule: <b>{len(data.get('daily_schedule', []))}</b> row\n"
+        f"Template: <b>{len(data.get('template', []))}</b> row\n"
+        f"Variables: <b>{len(data.get('variables', []))}</b> row\n"
+        f"VIP Codes: <b>{len(data.get('vip_codes', []))}</b> row\n"
+        f"Bot Settings: <b>{len(data.get('bot_settings', []))}</b> row\n"
+        f"VIP Variables: <b>{len(data.get('vip_variables', []))}</b> row\n"
     )
     
     return file,info
@@ -443,13 +443,13 @@ def restore_Backup_Logic():
 
         return (
             "✅ <i>Backup Restored:</i>\n\n"
-            f"Users            : <b>{len(data.get('users', []))}</b> row\n"
-            f"Variables       : <b>{len(data.get('variables', []))}</b> row\n"
-            f"VIP Codes      : <b>{len(data.get('vip_codes', []))}</b> row\n"
-            f"VIP Variables  : <b>{len(data.get('vip_variables', []))}</b> row\n"
-            f"Schedule       : <b>{len(data.get('daily_schedule', []))}</b> row\n"
-            f"Template       : <b>{len(data.get('template', []))}</b> row\n"
-            f"Bot Settings   : <b>{len(data.get('bot_settings', []))}</b> row\n"
+            f"Users: <b>{len(data.get('users', []))}</b> row\n"
+            f"Schedule: <b>{len(data.get('daily_schedule', []))}</b> row\n"
+            f"Template: <b>{len(data.get('template', []))}</b> row\n"
+            f"Variables: <b>{len(data.get('variables', []))}</b> row\n"
+            f"VIP Codes: <b>{len(data.get('vip_codes', []))}</b> row\n"
+            f"Bot Settings: <b>{len(data.get('bot_settings', []))}</b> row\n"
+            f"VIP Variables: <b>{len(data.get('vip_variables', []))}</b> row\n"
         )    
         
     except Exception as e:
