@@ -108,7 +108,7 @@ def main():
     # init restore backup
 
     if Settings.get("tips") == "Tidak Ada Tips":
-        Settings.set("tips",generate_Tip_Logic())
+        # Settings.set("tips",generate_Tip_Logic())
         pass
         
     if Settings.is_logging():
