@@ -106,7 +106,6 @@ def main():
     # daemon.start()
 
     # init restore backup
-    restore_From_Channel_Pin_Logic()
 
     if Settings.get("tips") == "Tidak Ada Tips":
         Settings.set("tips",generate_Tip_Logic())

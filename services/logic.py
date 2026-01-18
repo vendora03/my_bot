@@ -82,6 +82,7 @@ async def on_Startup(app):
             text=f"🚀 Bot Start Up\nTime: {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}",
             parse_mode="HTML"
         )
+    await restore_From_Channel_Pin_Logic(app)
     await set_Base_User_Commands(app)
 
 async def set_Base_User_Commands(app):
