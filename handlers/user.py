@@ -38,7 +38,7 @@ async def start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
 async def user_Start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):    
@@ -118,7 +118,7 @@ async def get_Reguler_Content_Handler(access_code: str, update: Update, context:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -174,7 +174,7 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
                 )
             except Exception as e:
                 if Settings.is_logging():
-                    logging.error(f"[Handler] Failed to notify admin {admin_id}: {e}")
+                    logging.warning(f"[Handler] Failed to notify admin {admin_id}: {e}")
         user_data = get_User_Logic(user_data.user_id)
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
@@ -197,7 +197,7 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -262,7 +262,7 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -322,7 +322,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
      
     finally:
@@ -379,7 +379,7 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -458,7 +458,7 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:

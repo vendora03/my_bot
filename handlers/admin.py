@@ -61,7 +61,7 @@ async def user_Statistic_Handler(update: Update, context: ContextTypes.DEFAULT_T
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -99,7 +99,7 @@ async def log_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
     
     finally:
@@ -139,7 +139,7 @@ async def backup_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
     
     finally:
@@ -188,7 +188,7 @@ async def restore_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
 
@@ -294,7 +294,7 @@ async def set_Variable_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -359,7 +359,7 @@ async def set_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAU
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -419,7 +419,7 @@ async def show_All_Daily_Schedule_Handler(update: Update, context: ContextTypes.
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -461,7 +461,7 @@ async def show_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFA
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -517,7 +517,7 @@ async def delete_Daily_Schedule_Handler(update: Update, context: ContextTypes.DE
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -575,7 +575,7 @@ async def get_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -626,7 +626,7 @@ async def set_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -670,7 +670,7 @@ async def template_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -709,7 +709,7 @@ async def show_All_Template_Handler(update: Update, context: ContextTypes.DEFAUL
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -744,7 +744,7 @@ async def show_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TY
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -798,7 +798,7 @@ async def delete_Template_Handler(update: Update, context: ContextTypes.DEFAULT_
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
 
@@ -853,7 +853,7 @@ async def create_VIP_Code_Handler(update: Update, context: ContextTypes.DEFAULT_
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -905,7 +905,7 @@ async def set_VIP_Variable_Handler(update: Update, context: ContextTypes.DEFAULT
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -971,7 +971,7 @@ async def list_VIP_Users_Handler(update: Update, context: ContextTypes.DEFAULT_T
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
 
@@ -1045,7 +1045,7 @@ async def scheduled_job(context: ContextTypes.DEFAULT_TYPE):
             logging.warning("[TIMEOUT] Koneksi Timeout...")
     except Exception as e:
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         for admin_id in ADMIN_IDS:
             await context.bot.send_message(chat_id=admin_id, text="❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
         
@@ -1122,7 +1122,7 @@ async def schedule_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
@@ -1202,7 +1202,7 @@ async def settings_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
-            logging.error(f"[ERROR] Something Wrong... -> {e}")
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:

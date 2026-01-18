@@ -130,7 +130,7 @@ def DB_Save_User(user_model: User):
         #     print(f"[DB] User saved: {user_model.user_id}")
 
     except Exception as e:
-        logging.error("[DB ERROR]", e)
+        logging.warning("[DB ERROR]", e)
         raise
 
     finally:
@@ -574,7 +574,7 @@ def DB_Delete_VIP_Code(access_code: str, user_id: str):
         
     except Exception as e:
         conn.rollback()
-        logging.error(f"[DB ERROR] VIP Code deletion failed: {e}")
+        logging.warning(f"[DB ERROR] VIP Code deletion failed: {e}")
         return {"success": False, "message": "Terjadi kesalahan"}
     finally:
         conn.close()
@@ -727,7 +727,7 @@ def DB_Set_Bot_Settings(key: str, value: str, now: str) -> bool:
         return True
         
     except Exception as e:
-        logging.error(f"[DB ERROR] Failed to save bot setting: {e}")
+        logging.warning(f"[DB ERROR] Failed to save bot setting: {e}")
         return False
         
     finally:

@@ -55,11 +55,11 @@ async def error_handler(update, context):
     err = context.error
 
     if isinstance(err, TimedOut):
-        logging.error(f"TimeOut: {err}")
+        logging.warning(f"TimeOut: {err}")
         return
     
     if isinstance(err, NetworkError):
-        logging.error(f"Network Issues: {err}")
+        logging.warning(f"Network Issues: {err}")
         return
     
     if Settings.is_logging():
@@ -250,7 +250,7 @@ async def send_Backup_To_Admin_Logic(context, file, info):
             )
             logging.info(f"[BACKUP] Sent to admin {admin_id}")
         except Exception as e:
-            logging.error(f"[BACKUP] Failed to send to admin {admin_id}: {e}")
+            logging.warning(f"[BACKUP] Failed to send to admin {admin_id}: {e}")
         
         file.seek(0)
     
@@ -262,7 +262,7 @@ async def send_Backup_To_Channel_Logic(context, file, info):
                 text=f"❌ <i>Channel Database Not Found...</i>",
                 parse_mode="HTML"
             )
-        logging.warning("[BACKUP] CHANNEL_ID not set, skip channel backup")
+        logging.warning("[BACKUP] CHANNEL_ID not set up")
 
     file.seek(0)
     
@@ -282,7 +282,7 @@ async def send_Backup_To_Channel_Logic(context, file, info):
         logging.info(f"[BACKUP] Sent to channel and pinned")
         
     except Exception as e:
-        logging.error(f"[BACKUP] Failed to send to channel: {e}")
+        logging.warning(f"[BACKUP] Failed to send to channel: {e}")
         
 async def restore_From_Channel_Pin_Logic(app):
     if not CHANNEL_ID:
@@ -292,7 +292,7 @@ async def restore_From_Channel_Pin_Logic(app):
                 text=f"❌ <i>Channel Database Not Found...</i>",
                 parse_mode="HTML"
             )
-        logging.warning("[BACKUP] CHANNEL_ID not set, skip channel backup")
+        logging.warning("[RESTORE] CHANNEL_ID not set up")
     
     try:
         chat = await app.bot.get_chat(CHANNEL_ID)
@@ -315,7 +315,6 @@ async def restore_From_Channel_Pin_Logic(app):
         result = restore_Backup_Logic()
                 
         if result:
-            logging.info("[RESTORE] Database restored successfully")
             for admin_id in ADMIN_IDS:
                 await app.bot.send_message(
                     chat_id=admin_id,
@@ -323,7 +322,7 @@ async def restore_From_Channel_Pin_Logic(app):
                     parse_mode="HTML"
                 )
     except Exception as e:
-        logging.error(f"[RESTORE] Failed To Restore Backup From Channel: {e}")
+        logging.warning(f"[RESTORE] Failed To Restore Backup From Channel: {e}")
 
 async def backup_to_channel_job(context):
     file, info = setup_Backup_Logic()
@@ -454,7 +453,7 @@ def restore_Backup_Logic():
         
     except Exception as e:
         if Settings.is_logging():
-            logging.error("[BACKUP ERROR] Restore Failed:", e)
+            logging.warning("[BACKUP ERROR] Restore Failed:", e)
         return f"<b>!!!Restored Failed!!!</b>"
     
 # ====== Get Current Time =============== 
@@ -502,7 +501,7 @@ def generate_Tip_Logic() -> str:
         if e.status_code == 429:  
             print("Rate limit reached, retrying...")
         if Settings.is_logging():
-            logging.error(f"[Logic] Generate Failed!!!")
+            logging.warning(f"[Logic] Generate Failed!!!")
         return "Tidak Ada Tips!!"
     
 # ====== [ADM] Call Broadcast =========== 
