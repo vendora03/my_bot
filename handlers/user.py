@@ -397,7 +397,6 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
         await cek_Subscribe_Logic(update, context, user_data.user_id)
-        global TIP
         start = time.time()
         
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
@@ -428,11 +427,11 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         # format tanggal dan jam startup
         startup_text = START_TIME.strftime("%H:%M:%S %d-%m-%Y")
-        if not TIP:
-            TIP = "Tidak Ada Tips."
+        if not Settings.get('tips'):
+            Settings.set('tips', "Tidak Ada Tips.")
             
         massage_uptime = (
-            f"🏓 Pong\n\n│🚀  StartUP\n├───  <b>{startup_text}</b>\n│🕑  UpTime\n├───  <b>{uptime_text}</b>\n│📡  Ping \n├───  <b>{ping_ms} ms</b>\n│💡  Tips\n└───  <b>{TIP}</b>\n"
+            f"🏓 Pong\n\n│🚀  StartUP\n├───  <b>{startup_text}</b>\n│🕑  UpTime\n├───  <b>{uptime_text}</b>\n│📡  Ping \n├───  <b>{ping_ms} ms</b>\n│💡  Tips\n└───  <b>{Settings.get('tips')}</b>\n"
         )
         
         if msg and getattr(msg, "message_id", None):

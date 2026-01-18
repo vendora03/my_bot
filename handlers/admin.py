@@ -127,7 +127,7 @@ async def backup_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file, info = setup_Backup_Logic()
         await send_Backup_To_Admin_Logic(context, file, info)
         await send_Log_Logic(context)
-        send_Backup_To_Channel_Logic(context, file, info)
+        await send_Backup_To_Channel_Logic(context, file, info)
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()

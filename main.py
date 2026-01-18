@@ -111,8 +111,9 @@ def main():
         if Settings.is_logging:
             logging.info(response.replace("<b>","").replace("</b>",""))
 
-    if Settings.get("tips","") == "Tidak Ada Tips":
+    if Settings.get("tips") == "Tidak Ada Tips":
         Settings.set("tips",generate_Tip_Logic())
+        pass
         
     if Settings.is_logging():
         logging.info("[BOT] Starting in DEBUG mode (long polling)")
