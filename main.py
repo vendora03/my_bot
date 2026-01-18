@@ -8,7 +8,7 @@ from services.logic import (
     init_settings, 
     error_handler,
     on_Startup, 
-    restore_Backup_Logic,
+    restore_From_Channel_Pin_Logic,
     generate_Tip_Logic,
     # get_Daily_Schedule_Logic,
     setup_Backup_Logic,
@@ -106,10 +106,7 @@ def main():
     # daemon.start()
 
     # init restore backup
-    response = restore_Backup_Logic()
-    if response:
-        if Settings.is_logging:
-            logging.info(response.replace("<b>","").replace("</b>",""))
+    restore_From_Channel_Pin_Logic()
 
     if Settings.get("tips") == "Tidak Ada Tips":
         Settings.set("tips",generate_Tip_Logic())
