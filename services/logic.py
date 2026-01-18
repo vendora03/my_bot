@@ -449,6 +449,7 @@ def restore_Backup_Logic():
             f"VIP Variables  : <b>{len(data.get('vip_variables', []))}</b> row\n"
             f"Schedule       : <b>{len(data.get('daily_schedule', []))}</b> row\n"
             f"Template       : <b>{len(data.get('template', []))}</b> row\n"
+            f"Bot Settings   : <b>{len(data.get('bot_settings', []))}</b> row\n"
         )    
         
     except Exception as e:
