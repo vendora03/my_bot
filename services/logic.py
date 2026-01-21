@@ -207,11 +207,20 @@ async def cek_Subscribe_Logic(update, context, user_id) -> bool:
     for id_group in id_groups:
         if not await is_user_joined(context, user_id, int(id_group)):
             keyboard = build_Join_Button_Logic()
-
-            await update.message.reply_text(
-                Settings.get_start_info(),
-                reply_markup=keyboard
-            )
+            start_info = Settings.get_start_info()
+            if "@user" in start_info:
+                await update.message.reply_text(
+                    start_info.replace("@user", update.effective_user.first_name),
+                    reply_markup=keyboard,
+                    parse_mode="HTML"
+                )
+            else:
+                await update.message.reply_text(
+                    start_info,
+                    reply_markup=keyboard,
+                    parse_mode="HTML"
+                )
+                
             return False   
 
     return True
