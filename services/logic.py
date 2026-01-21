@@ -237,7 +237,8 @@ async def send_Log_Logic(context):
                 chat_id=admin_id,
                 text= "❌ <i>Gagal mendapat file</i>",
                 parse_mode="HTML")
-        logging.warning("Log file not found")
+        if Settings.is_logging():
+            logging.warning("Log file not found")
         return
 
     text = (
@@ -257,9 +258,11 @@ async def send_Backup_To_Admin_Logic(context, file, info):
                 caption=info,
                 parse_mode="HTML"
             )
-            logging.info(f"[BACKUP] Sent to admin {admin_id}")
+            # if DEBUG:
+            #     logging.info(f"[BACKUP] Sent to admin {admin_id}")
         except Exception as e:
-            logging.warning(f"[BACKUP] Failed to send to admin {admin_id}: {e}")
+            if Settings.is_logging():
+                logging.error(f"[BACKUP] Failed to send to admin {admin_id}: {e}")
         
         file.seek(0)
     
@@ -271,7 +274,8 @@ async def send_Backup_To_Channel_Logic(context, file, info):
                 text=f"❌ <i>Channel Database Not Found...</i>",
                 parse_mode="HTML"
             )
-        logging.warning("[BACKUP] CHANNEL_ID not set up")
+        if Settings.is_logging():
+            logging.warning("[BACKUP] CHANNEL_ID not set up")
 
     file.seek(0)
     
@@ -288,10 +292,12 @@ async def send_Backup_To_Channel_Logic(context, file, info):
             message_id=msg.message_id,
             disable_notification=True  
         )
-        logging.info(f"[BACKUP] Sent to channel and pinned")
+        # if DEBUG:
+        #     logging.info(f"[BACKUP] Sent to channel and pinned")
         
     except Exception as e:
-        logging.warning(f"[BACKUP] Failed to send to channel: {e}")
+        if Settings.is_logging():
+            logging.error(f"[BACKUP] Failed to send to channel: {e}")
         
 async def restore_From_Channel_Pin_Logic(app):
     if not CHANNEL_ID:
@@ -301,19 +307,22 @@ async def restore_From_Channel_Pin_Logic(app):
                 text=f"❌ <i>Channel Database Not Found...</i>",
                 parse_mode="HTML"
             )
-        logging.warning("[RESTORE] CHANNEL_ID not set up")
+        if Settings.is_logging():
+            logging.warning("[RESTORE] CHANNEL_ID not set up")
     
     try:
         chat = await app.bot.get_chat(CHANNEL_ID)
         
         if not chat.pinned_message:
-            logging.warning("[RESTORE] No pinned message in channel")
+            if Settings.is_logging():
+                logging.warning("[RESTORE] No pinned message in channel")
             return
         
         pinned_msg = chat.pinned_message
         
         if not pinned_msg.document:
-            logging.warning("[RESTORE] Pinned message has no document")
+            if Settings.is_logging():
+                logging.warning("[RESTORE] Pinned message has no document")
             return
         
         file_id = pinned_msg.document.file_id
@@ -331,7 +340,8 @@ async def restore_From_Channel_Pin_Logic(app):
                     parse_mode="HTML"
                 )
     except Exception as e:
-        logging.warning(f"[RESTORE] Failed To Restore Backup From Channel: {e}")
+        if Settings.is_logging():
+            logging.error(f"[RESTORE] Failed To Restore Backup From Channel: {e}")
 
 async def backup_to_channel_job(context):
     file, info = setup_Backup_Logic()
@@ -462,7 +472,7 @@ def restore_Backup_Logic():
         
     except Exception as e:
         if Settings.is_logging():
-            logging.warning("[BACKUP ERROR] Restore Failed:", e)
+            logging.error("[BACKUP ERROR] Restore Failed:", e)
         return f"<b>!!!Restored Failed!!!</b>"
     
 # ====== Get Current Time =============== 
@@ -507,10 +517,8 @@ def generate_Tip_Logic() -> str:
             
         return tips
     except ClientError as e:
-        if e.status_code == 429:  
-            print("Rate limit reached, retrying...")
         if Settings.is_logging():
-            logging.warning(f"[Logic] Generate Failed!!!")
+            logging.error(f"[Logic] Generate Failed!!!: {e}")
         return "Tidak Ada Tips!!"
     
 # ====== [ADM] Call Broadcast =========== 
