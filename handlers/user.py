@@ -88,23 +88,19 @@ async def get_Reguler_Content_Handler(access_code: str, update: Update, context:
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
         
         respon = get_Content_Logic(access_code)
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
         if respon:
             file_id = respon.get("file_id")
             content = respon.get("content")
             if file_id:
-                if msg and getattr(msg, "message_id", None):
-                    await msg.delete()
                 await update.message.reply_photo(
                     photo=file_id,
-                    caption=content 
+                    caption=content
                 )
             else:
-                if msg and getattr(msg, "message_id", None):
-                    await msg.delete()
-                await update.message.reply_text(content)
+                await update.message.reply_text(content, disable_web_page_preview=True)
         else:
-            if msg and getattr(msg, "message_id", None):
-                await msg.delete()
             await update.message.reply_text(f"❌ <i><b>Not Found...</b></i>",parse_mode="HTML")
             
     except TimedOut:
@@ -249,7 +245,7 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
         else:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text(content, parse_mode="HTML")
+            await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
             
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
@@ -308,7 +304,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
             if file_id:
                 await update.message.reply_photo(photo=file_id,caption=content)
             else:
-                await update.message.reply_text(content, parse_mode="HTML")
+                await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
             time.sleep(1)
             
     except TimedOut:
@@ -366,7 +362,7 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
         if file_id:
             await update.message.reply_photo(photo=file_id,caption=content)
         else:
-            await update.message.reply_text(content, parse_mode="HTML")
+            await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
             
     except TimedOut:
         if msg and getattr(msg, "message_id", None):

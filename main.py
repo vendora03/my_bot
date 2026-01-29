@@ -96,7 +96,8 @@ def main():
     
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
-    logging.getLogger("telegram").setLevel(logging.INFO)
+    logging.getLogger("telegram").setLevel(logging.WARNING)
+    logging.getLogger("telegram.ext._jobqueue").setLevel(logging.CRITICAL)
     
     if not BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN belum diset")
