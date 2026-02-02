@@ -67,7 +67,10 @@ class Settings:
     def get_group(cls) -> str:
         return cls._load("group", "")
         
-   
+   # ---------- TUTORIAL INFO ----------
+    @classmethod
+    def get_tutorial_info(cls) -> str:
+        return cls._load("tutorial_info", "")
         
         
         

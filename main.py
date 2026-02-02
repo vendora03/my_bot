@@ -19,6 +19,7 @@ from services.logic import (
 from handlers.user import (
     user_Start_Handler,
     ping_Handler,
+    tutorial_Handler,
     send_VIP_All_Package_Handler,
     get_Latest_VIP_Content_Handler)
 from config import (
@@ -124,6 +125,7 @@ def main():
     # USER
     app.add_handler(CommandHandler("start", user_Start_Handler))
     app.add_handler(CommandHandler("ping", ping_Handler))
+    app.add_handler(CommandHandler("tutorial", tutorial_Handler))
     
     # USER VIP
     app.add_handler(CommandHandler("getall", send_VIP_All_Package_Handler))

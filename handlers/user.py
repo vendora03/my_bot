@@ -385,14 +385,12 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
             except BadRequest:
                 pass
 
-
-
 # ====== Handle PING =======================
 async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        await cek_Subscribe_Logic(update, context, user_data.user_id)
+        # await cek_Subscribe_Logic(update, context, user_data.user_id)
         start = time.time()
         
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
@@ -463,3 +461,48 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await msg.delete()
             except BadRequest:
                 pass
+
+# ====== Handle TUTORIAL ===================            
+async def tutorial_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    msg = None
+    try:
+        user_data = update_User_Activity_Logic(update.effective_user)
+        await cek_Subscribe_Logic(update, context, user_data.user_id)
+        
+        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
+        
+        # if DEBUG:
+        #     print("[Handlers] User: Tutorial")
+        
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        tutorial_info = Settings.get("tutorial_info")
+        if tutorial_info:
+            await update.message.reply_text(tutorial_info, parse_mode="HTML", disable_web_page_preview=True) 
+            return
+        return 
+            
+    except TimedOut:
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+            
+        if Settings.is_logging():
+            logging.warning("[TIMEOUT] Koneksi Timeout...")
+            
+        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+
+    except Exception as e:
+        if msg and getattr(msg, "message_id", None):
+            await msg.delete()
+        if Settings.is_logging():
+            logging.warning(f"[ERROR] Something Wrong... -> {e}")
+        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+
+    finally:
+        if msg and getattr(msg, "message_id", None):
+            try:
+                await msg.delete()
+            except BadRequest:
+                pass         
+            
+            

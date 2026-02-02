@@ -7,6 +7,7 @@ load_dotenv()
 # ==== SETTINGS 
 SETTINGS_SCHEMA = {
     "debug": "bool",
+    "tutorial_info": "text",
     "start_info_state": "bool",
     "start_info": "text",
     "vip_info_state": "bool",
@@ -52,6 +53,7 @@ DEBUG = False
 
 # ==== GET SETTINGS ====
 IS_LOG = os.getenv("IS_LOG", "false").lower() 
+TUTORIAL_INFO = "https://telegra.ph/All-You-Need-02-02"
 START_INFO_STATE = os.getenv("DAILY_UPDATE", "false").lower() 
 START_INFO = "HI @user\nKamu Belum bergabung Nih\nGabung Terlebih dahulu sebelum akses content\n"
 VIP_INFO_STATE = os.getenv("DAILY_UPDATE", "false").lower() 
@@ -63,6 +65,7 @@ TIPS = os.getenv("TIPS","Tidak Ada Tips")
 # ==== SET SETTINGS ====
 DEFAULT_SETTINGS = {
     "debug": IS_LOG,
+    "tutorial_info": TUTORIAL_INFO,
     "start_info_state": START_INFO_STATE,
     "start_info": START_INFO,
     "vip_info_state": VIP_INFO_STATE,

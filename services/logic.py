@@ -69,9 +69,9 @@ def format_Help_Logic():
     lines = ["format penggunaan:"]
     for key, t in SETTINGS_SCHEMA.items():
         if t == "bool":
-            lines.append(f"/setting {key} true|false")
+            lines.append(f"/settings {key} true|false")
         else:
-            lines.append(f"/setting {key} <teks>")
+            lines.append(f"/settings {key} <teks>")
     return "\n".join(lines)
 
 # <<<<<<<<<< START GENERAL >>>>>>>>>>>>>>
@@ -108,6 +108,7 @@ def build_Commands_User(user: User) -> list[BotCommand]:
     BASE_USER_COMMANDS = [
         ("start", "Mulai bot"),
         ("ping", "Uptime Bot"),
+        ("tutorial", "Cek Sendiri Dah"),
     ]
 
     VIP_COMMANDS = [
