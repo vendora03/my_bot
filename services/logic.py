@@ -394,6 +394,7 @@ def restore_Backup_Logic():
                 first_name=u["first_name"],
                 last_name=u.get("last_name",""),
                 username=u.get("username","Anonym"),
+                is_vip=u["is_vip"],
                 is_active=u["is_active"],
                 last_active=u["last_active"],
                 created_at=u["created_at"],
