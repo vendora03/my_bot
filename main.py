@@ -1,5 +1,5 @@
 import pytz
-import time as waktu, config
+import time as waktu
 from datetime import time
 from telegram.ext import Application,CommandHandler,MessageHandler, filters
 from services.settings import Settings
@@ -8,7 +8,7 @@ from services.logic import (
     init_settings, 
     error_handler,
     on_Startup, 
-    restore_From_Channel_Pin_Logic,
+    # restore_From_Channel_Pin_Logic,
     generate_Tip_Logic,
     # get_Daily_Schedule_Logic,
     setup_Backup_Logic,
@@ -25,8 +25,8 @@ from handlers.user import (
 from config import (
     # DEBUG, 
     BOT_TOKEN, 
-    TIPS, 
-    ADMIN_IDS, 
+    # TIPS, 
+    # ADMIN_IDS, 
     TIMEZONE)
 from handlers.admin import (
     log_Handler,
@@ -49,8 +49,8 @@ from handlers.admin import (
     template_Handler,
     delete_Template_Handler)
 
-from flask import Flask
-from threading import Thread
+# from flask import Flask
+# from threading import Thread
 from services.logger import AppLogger
 import logging
 

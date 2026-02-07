@@ -2,6 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.error import TimedOut, BadRequest
 from services.update_user import update_User_Activity_Logic
+from services.proccess_manager import ProccessManager
 from services.logic import (
     setup_Backup_Logic,
     send_Log_Logic,
@@ -24,6 +25,21 @@ from config import (
 from services.settings import Settings
 import datetime, pytz, time, logging
 
+def proccess_handling(func):
+    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+        user_id = update.effective_user.id
+        
+        if ProccessManager.is_processing(user_id):
+            return  
+        
+        ProccessManager.start_processing(user_id)
+        
+        try:
+            await func(update, context)
+        finally:
+            ProccessManager.finish_processing(user_id)
+    
+    return wrapper  
 
 
 async def start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -41,6 +57,7 @@ async def start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
+@proccess_handling
 async def user_Start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):    
     user_data = update_User_Activity_Logic(update.effective_user)
     await set_commands_for_user(context, user_data)
@@ -60,6 +77,7 @@ async def user_Start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await Content_Handler(access_code, update, context)
         return
         
+        
 async def Content_Handler(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE ):
     # if DEBUG:
     #     print("[Handlers] User: Get Content")
@@ -75,8 +93,7 @@ async def Content_Handler(access_code: str, update: Update, context: ContextType
         return
     else:
         await update.message.reply_text("❌ Tidak Ada Gempa Terbaru.")
-    
-       
+           
 # ====== Handle Reguler Content Access =====
 async def get_Reguler_Content_Handler(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
@@ -268,7 +285,10 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
             except BadRequest:
                 pass
 
+
+
 # ====== Send VIP Welcome Package ==========
+@proccess_handling
 async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
@@ -329,6 +349,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
                 pass
 
 # ====== Get Latest VIP Content  ===========
+@proccess_handling
 async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
@@ -386,6 +407,7 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
                 pass
 
 # ====== Handle PING =======================
+@proccess_handling
 async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
@@ -462,7 +484,8 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except BadRequest:
                 pass
 
-# ====== Handle TUTORIAL ===================            
+# ====== Handle TUTORIAL ===================    
+@proccess_handling        
 async def tutorial_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
