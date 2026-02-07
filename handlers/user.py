@@ -23,7 +23,7 @@ from config import (
     START_TIME, 
     TIMEZONE)
 from services.settings import Settings
-import datetime, pytz, time, logging
+import datetime, pytz, time, logging, asyncio
 
 def proccess_handling(func):
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -325,7 +325,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
                 await update.message.reply_photo(photo=file_id,caption=content)
             else:
                 await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
-            time.sleep(1)
+            asyncio.sleep(1)
             
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
