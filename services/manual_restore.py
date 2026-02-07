@@ -1,6 +1,6 @@
 import sqlite3, logging, os, json, sys
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 restore_json = os.path.join(BASE_DIR, "restore.json")
 db_path = os.path.join(BASE_DIR, "data", "bot.db")
 
