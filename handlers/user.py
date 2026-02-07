@@ -24,24 +24,24 @@ from config import (
     TIMEZONE)
 from services.settings import Settings
 import datetime, pytz, time, logging, asyncio
-from functools import wraps
+# from functools import wraps
 
-def proccess_handling(func):
-    @wraps(func)
-    async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
-        user_id = update.effective_user.id
+# def proccess_handling(func):
+#     @wraps(func)
+#     # async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
+#     #     user_id = update.effective_user.id
         
-        if ProccessManager.is_processing(user_id):
-            return  
+#     #     if ProccessManager.is_processing(user_id):
+#     #         return  
         
-        ProccessManager.start_processing(user_id)
+#     #     ProccessManager.start_processing(user_id)
         
-        try:
-            await func(update, context)
-        finally:
-            ProccessManager.finish_processing(user_id)
+#     #     try:
+#     #         await func(update, context)
+#     #     finally:
+#     #         ProccessManager.finish_processing(user_id)
     
-    return wrapper  
+#     # return wrapper  
 
 
 async def start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -59,7 +59,7 @@ async def start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             logging.warning(f"[ERROR] Something Wrong... -> {e}")
         await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
-@proccess_handling
+# @proccess_handling
 async def user_Start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):    
     user_data = update_User_Activity_Logic(update.effective_user)
     await set_commands_for_user(context, user_data)
@@ -290,7 +290,7 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
 
 
 # ====== Send VIP Welcome Package ==========
-@proccess_handling
+# @proccess_handling
 async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
@@ -351,7 +351,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
                 pass
 
 # ====== Get Latest VIP Content  ===========
-@proccess_handling
+# @proccess_handling
 async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
@@ -409,7 +409,7 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
                 pass
 
 # ====== Handle PING =======================
-@proccess_handling
+# @proccess_handling
 async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
@@ -487,7 +487,7 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 pass
 
 # ====== Handle TUTORIAL ===================    
-@proccess_handling        
+# @proccess_handling        
 async def tutorial_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
