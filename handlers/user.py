@@ -24,8 +24,10 @@ from config import (
     TIMEZONE)
 from services.settings import Settings
 import datetime, pytz, time, logging, asyncio
+from functools import wraps
 
 def proccess_handling(func):
+    @wraps(func)
     async def wrapper(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_id = update.effective_user.id
         
