@@ -327,7 +327,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
                 await update.message.reply_photo(photo=file_id,caption=content)
             else:
                 await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
-            asyncio.sleep(1)
+            await asyncio.sleep(1)
             
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
