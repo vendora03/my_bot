@@ -118,18 +118,18 @@ def main():
 
         
     # build application
-    app = Application.builder().token(BOT_TOKEN).build()
+    app = Application.builder().token(BOT_TOKEN).concurrent_updates(True).build()
     app.post_init = on_Startup
 
     # register handlers
     # USER
-    app.add_handler(CommandHandler("start", user_Start_Handler))
-    app.add_handler(CommandHandler("ping", ping_Handler))
-    app.add_handler(CommandHandler("tutorial", tutorial_Handler))
+    app.add_handler(CommandHandler("start", user_Start_Handler, block=False))
+    app.add_handler(CommandHandler("ping", ping_Handler, block=False))
+    app.add_handler(CommandHandler("tutorial", tutorial_Handler, block=False))
     
     # USER VIP
-    app.add_handler(CommandHandler("getall", send_VIP_All_Package_Handler))
-    app.add_handler(CommandHandler("getnew", get_Latest_VIP_Content_Handler))
+    app.add_handler(CommandHandler("getall", send_VIP_All_Package_Handler, block=False))
+    app.add_handler(CommandHandler("getnew", get_Latest_VIP_Content_Handler, block=False))
     
     # ADMIN
     # app.add_handler(CommandHandler("removeallvip", remove_All_VIP_Handler))

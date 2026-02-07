@@ -43,6 +43,12 @@ def is_admin(user_id: int) -> bool:
 async def user_Statistic_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = f"(@{user.username})" if user.username else ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/log]")
+            return
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
 
         users = get_All_User_Logic()
@@ -541,13 +547,13 @@ async def get_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         # if DEBUG:
         #     print("[Handlers] Admin: Get Template")
 
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
-
         if len(context.args) < 2:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             await update.message.reply_text("Format: /gettemplate <code> <Arg[space]>")
             return
+        
+        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 
         access_code = context.args[0]
         values = context.args[1:]
@@ -761,9 +767,11 @@ async def delete_Template_Handler(update: Update, context: ContextTypes.DEFAULT_
         # if DEBUG:
         #     print("[Handlers] Admin: Delete Template")
 
-        user_id = update.effective_user.id
-        if not is_admin(user_id):
-            await update.message.reply_text("⛔ Kamu bukan admin.")
+        user = update.effective_user
+        if not is_admin(user.id):
+            last_name = user.last_name or ""
+            username = f"(@{user.username})" if user.username else ""
+            logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/template]")
             return
 
         if len(context.args) < 1:
@@ -986,11 +994,12 @@ async def list_VIP_Users_Handler(update: Update, context: ContextTypes.DEFAULT_T
 
 
 # async def remove_All_VIP_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
-#     user_id = update.effective_user.id
-    
-#     if not is_admin(user_id):
-#         await update.message.reply_text("❌ Unauthorized")
-#         return
+#     user = update.effective_user
+    # if not is_admin(user.id):
+    #     last_name = user.last_name or ""
+    #     username = f"(@{user.username})" if user.username else ""
+    #     logging.info(f"{user.first_name + last_name}({username}) mencoba akses command [/template]")
+    #     return
 #     msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 #     # DB_Remove_All_VIP()
 #     await msg.delete()
