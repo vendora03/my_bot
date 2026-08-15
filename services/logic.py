@@ -14,7 +14,7 @@ from config import (
     PROMPT, 
     SETTINGS_SCHEMA,
     DEFAULT_SETTINGS)
-import database
+from services import database
 
 
 def init_settings():
