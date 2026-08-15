@@ -1,7 +1,7 @@
 import sys
 import json
-from services import database
-from services import logic
+from services.database import (DB_Get_Connection, DB_Save_All_VIP_Variable, DB_Create_Table_VIP_Variable, DB_Drop_Table_VIP_Variable, DB_Create_Table_Variable, DB_Save_All_Variable, DB_Get_All_Variable, DB_Get_All_VIP_Variable, DB_Drop_Table_Variable)
+from services.logic import (set_Variable_Logic, set_VIP_Variable_Logic)
 
 task = sys.argv[1] if len(sys.argv) > 1 else None
 key = sys.argv[2] if len(sys.argv) > 2 else None
@@ -20,14 +20,14 @@ def response(status, message, data=None):
 match task:
     case "get_data":
         if key == "variables":
-            data = database.DB_Get_All_Variable()
+            data = DB_Get_All_Variable()
             response(
                 "success",
                 "berhasil mengambil variables",
                 data
             )
         elif key == "vip_variables":
-            data = database.DB_Get_All_VIP_Variable()
+            data = DB_Get_All_VIP_Variable()
             response(
                 "success",
                 "berhasil mengambil vip_variables",
@@ -45,7 +45,7 @@ match task:
                 "key tidak dikenal"
             )
             sys.exit()
-        conn = database.DB_Get_Connection()
+        conn = DB_Get_Connection()
 
         try:
             raw_data = json.loads(sys.stdin.read())
@@ -60,13 +60,13 @@ match task:
             ]
        
             if key == "variables":
-                database.DB_Drop_Table_Variable(conn)
-                database.DB_Create_Table_Variable(conn)
-                database.DB_Save_All_Variable(data, conn)
+                DB_Drop_Table_Variable(conn)
+                DB_Create_Table_Variable(conn)
+                DB_Save_All_Variable(data, conn)
             elif key == "vip_variables":
-                database.DB_Drop_Table_VIP_Variable(conn)
-                database.DB_Create_Table_VIP_Variable(conn)
-                database.DB_Save_All_VIP_Variable(data, conn)
+                DB_Drop_Table_VIP_Variable(conn)
+                DB_Create_Table_VIP_Variable(conn)
+                DB_Save_All_VIP_Variable(data, conn)
             conn.commit()
             response(
                 "success",
@@ -88,15 +88,15 @@ match task:
             )
             sys.exit()
         
-        conn = database.DB_Get_Connection()
+        conn = DB_Get_Connection()
         
         try:
             data = json.loads(sys.stdin.read())
         
             if key == "variables":
-                result = logic.set_Variable_Logic(data["content"], "AgACAgUAAxkBAAIJy2mAQ6YD5c-ROy_-XEc2x_08trF8AAIoDmsbc3UBVP_H7wRWov5EAQADAgADeQADOAQ")
+                result = set_Variable_Logic(data["content"], "AgACAgUAAxkBAAIJy2mAQ6YD5c-ROy_-XEc2x_08trF8AAIoDmsbc3UBVP_H7wRWov5EAQADAgADeQADOAQ")
             elif key == "vip_variables":
-                result = logic.set_VIP_Variable_Logic(data["content"], None)
+                result = set_VIP_Variable_Logic(data["content"], None)
                 
             conn.commit()
             response(
