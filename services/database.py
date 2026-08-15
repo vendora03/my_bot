@@ -265,8 +265,10 @@ def DB_Get_All_Variable():
     conn.close()
     return [
         {
-            "content": row[0],
-            "file_id": row[1]
+            "access_code": row[0],
+            "content": row[1],
+            "file_id": row[2],
+            "created_at": row[3]
         }
         for row in rows
     ]
@@ -797,8 +799,10 @@ def DB_Get_All_VIP_Variable():
 
     return [
         {
-            "content": row[0],
-            "file_id": row[1]
+            "access_code": row[0],
+            "content": row[1],
+            "file_id": row[2],
+            "created_at": row[3]
         }
         for row in rows
     ]
