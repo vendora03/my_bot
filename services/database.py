@@ -260,7 +260,7 @@ def DB_Get_All_Variable():
     conn = DB_Get_Connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT content, file_id FROM variables")
+    cursor.execute("SELECT access_code, content, file_id, created_at FROM variables")
     rows = cursor.fetchall()
     conn.close()
     return [
@@ -789,9 +789,7 @@ def DB_Get_All_VIP_Variable():
     cursor = conn.cursor()
     
     cursor.execute("""
-        SELECT content, file_id
-        FROM vip_variables 
-        ORDER BY created_at ASC 
+        SELECT access_code, content, file_id, created_at FROM vip_variables 
     """)
     
     rows = cursor.fetchall()
