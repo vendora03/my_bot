@@ -10,7 +10,6 @@ from config import (
     BACKUP_PATH, 
     TIMEZONE, 
     SETTINGS_SCHEMA)
-# from services.database import DB_Remove_All_VIP
 from services.logic import (
     setup_Backup_Logic,
     send_Log_Logic,
@@ -697,7 +696,7 @@ async def show_All_Template_Handler(update: Update, context: ContextTypes.DEFAUL
             lines = [f"{i}. <code>{code}</code>" for i, code in enumerate(row, start=1)]
             respon = "All Template\n\n" + "\n".join(lines)
         else:
-            respon = "<i>!!<b>EMPTY Template</b>!!</i>"
+            respon = "<i>!!<b>EMPTY TEMPLATE</b>!!</i>"
             
         
         if msg and getattr(msg, "message_id", None):

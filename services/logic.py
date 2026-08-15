@@ -14,36 +14,7 @@ from config import (
     PROMPT, 
     SETTINGS_SCHEMA,
     DEFAULT_SETTINGS)
-from services.database import (
-    User,
-    DB_Get_User,
-    DB_Save_User,
-    DB_Save_Variable,
-    DB_Get_Content,
-    DB_Get_All_User,    
-    DB_Save_Daily_Schedule,
-    DB_Get_Daily_Schedule,
-    DB_All_Get_Daily_Schedule,
-    DB_Show_Daily_Schedule,
-    DB_Remove_Daily_Schedule,
-    DB_Cek_Index_Variable,
-    DB_Cek_Variable,
-    DB_Cek_Daily_Schedule,
-    DB_Cek_Template,
-    DB_Save_Template,
-    DB_All_Get_Template,
-    DB_Get_Template,
-    DB_Remove_Template,
-    DB_Backup,
-    DB_Save_VIP_Code,
-    DB_Check_VIP_Code,
-    DB_Delete_VIP_Code,
-    DB_Update_User_VIP,
-    DB_Save_VIP_Variable,
-    DB_Check_VIP_Variable,
-    DB_Get_VIP_Content,
-    DB_Get_All_VIP_Contents,
-    DB_Get_Latest_VIP_Contents)
+import database
 
 
 def init_settings():
@@ -95,7 +66,7 @@ async def set_Base_User_Commands(app):
         scope=BotCommandScopeDefault()
     )
        
-async def set_commands_for_user(app, user: User):
+async def set_commands_for_user(app, user: database.User):
     commands = build_Commands_User(user)
 
     await app.bot.set_my_commands(
@@ -104,7 +75,7 @@ async def set_commands_for_user(app, user: User):
         language_code=None
     )
  
-def build_Commands_User(user: User) -> list[BotCommand]:
+def build_Commands_User(user: database.User) -> list[BotCommand]:
     BASE_USER_COMMANDS = [
         ("start", "Mulai bot"),
         ("ping", "Uptime Bot"),
@@ -352,7 +323,7 @@ async def backup_to_channel_job(context):
 
 # ====== Backup To Json Logic =========== 
 def setup_Backup_Logic():
-    data = DB_Backup()
+    data = database.DB_Backup()
 
     json_bytes = json.dumps(
         data,
@@ -389,7 +360,7 @@ def restore_Backup_Logic():
 
         # restore users
         for u in data.get("users", []):
-            DB_Save_User(User(
+            database.DB_Save_User(database.User(
                 user_id=u["user_id"],
                 first_name=u["first_name"],
                 last_name=u.get("last_name",""),
@@ -402,7 +373,7 @@ def restore_Backup_Logic():
 
         # restore variables
         for v in data.get("variables", []):
-            DB_Save_Variable(
+            database.DB_Save_Variable(
                 content=v["content"],
                 access_code=v["access_code"],
                 file_id=v["file_id"],
@@ -412,7 +383,7 @@ def restore_Backup_Logic():
             
         # restore vip_codes
         for vc in data.get("vip_codes", []):
-            DB_Save_VIP_Code(
+            database.DB_Save_VIP_Code(
                 access_code=vc["access_code"],
                 now=vc["created_at"]
             )
@@ -420,7 +391,7 @@ def restore_Backup_Logic():
             
         # restore vip_variables
         for vv in data.get("vip_variables", []):
-            DB_Save_VIP_Variable(
+            database.DB_Save_VIP_Variable(
                 content=vv["content"],
                 access_code=vv["access_code"],
                 file_id=vv.get("file_id"),
@@ -430,7 +401,7 @@ def restore_Backup_Logic():
             
         # restore daily schedule            
         for d in data.get("daily_schedule", []):
-            DB_Save_Daily_Schedule(
+            database.DB_Save_Daily_Schedule(
                 access_code=d["access_code"],
                 content=d["content"],
                 file_id=d["file_id"],
@@ -439,7 +410,7 @@ def restore_Backup_Logic():
             
         # restore template          
         for d in data.get("template", []):
-            DB_Save_Template(
+            database.DB_Save_Template(
                 access_code=d["access_code"],
                 content=d["content"],
                 now=d["created_at"]
@@ -537,24 +508,24 @@ def do_Broadcast_Logic():
 # <<<<<<<<<<<< START USER >>>>>>>>>>>>>>>
 
 # ====== Save User ====================== 
-def set_User_Logic(user_model: User):
+def set_User_Logic(user_model: database.User):
     # if DEBUG:
     #     print("[Logic] Admin: Set User")
         
-    DB_Save_User(user_model)
+    database.DB_Save_User(user_model)
     return
 
-def get_User_Logic(user_id: str) -> User:
+def get_User_Logic(user_id: str) -> database.User:
     # if DEBUG:
     #     print("[Logic] Admin: Get User")
         
-    return DB_Get_User(user_id)
+    return database.DB_Get_User(user_id)
 
 def get_All_User_Logic():
     # if DEBUG:
     #     print("[Logic] Admin: Get All User")
         
-    return DB_Get_All_User()
+    return database.DB_Get_All_User()
 
 def user_Statistic_Logic(users: list[dict]) -> str:
     tz = pytz.timezone(TIMEZONE)
@@ -580,6 +551,10 @@ def user_Statistic_Logic(users: list[dict]) -> str:
             banned += 1
             continue
 
+        # 6️⃣ new user (tidak konflik kategori lain)
+        if created_at and (now - created_at) <= timedelta(days=1):
+            new_user += 1
+            
         # 2️⃣ online
         if delta <= timedelta(hours=1):
             online += 1
@@ -598,9 +573,6 @@ def user_Statistic_Logic(users: list[dict]) -> str:
         # 5️⃣ lebih dari 7 hari
         inactive += 1
 
-        # 6️⃣ new user (tidak konflik kategori lain)
-        if created_at and (now - created_at) <= timedelta(days=1):
-            new_user += 1
 
     # ===== OUTPUT =====
     return (
@@ -627,18 +599,18 @@ def set_Variable_Logic(content: str, file_id: str) -> str:
     # if DEBUG:
     #     print("[Logic] Admin: Set Variable")
         
-    index = DB_Cek_Index_Variable() // 100
+    index = database.DB_Cek_Index_Variable() // 100
     
     max_attempts = 1000  
     code_len = 16 - (len(str(index)) > 2)
     for _ in range(max_attempts):
         access_code = f"N0cTRaA{index}{create_Access_Code(code_len)}P0"
         
-        if not DB_Cek_Variable(access_code):  
+        if not database.DB_Cek_Variable(access_code):  
             break
         
     link = f"https://t.me/gempalokal_bot?start={access_code}"
-    DB_Save_Variable(content, access_code, file_id, get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S"))
+    database.DB_Save_Variable(content, access_code, file_id, get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S"))
     return link
 
 # ====== [ADM] Get Content Variable ===== 
@@ -646,7 +618,7 @@ def get_Content_Logic(access_code: str) -> str:
     # if DEBUG:
     #     print("[Logic] Get Content")
         
-    return DB_Get_Content(access_code)
+    return database.DB_Get_Variable(access_code)
 
 # <<<<<<<<<<< END VARIABLE >>>>>>>>>>>>>>
 
@@ -663,35 +635,35 @@ def set_Daily_Schedule_Logic(content: str, file_id: str) -> str:
     for _ in range(max_attempts):
         access_code = create_Access_Code(6)
         
-        if not DB_Cek_Daily_Schedule(access_code):  
+        if not database.DB_Cek_Daily_Schedule(access_code):  
             break
         
-    return DB_Save_Daily_Schedule(access_code, content, file_id, get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S"))
+    return database.DB_Save_Daily_Schedule(access_code, content, file_id, get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S"))
     
 # ====== [Auto] Get Daily Schedule ====== 
 def get_Daily_Schedule_Logic():
     # if DEBUG:
     #     print("[Logic] Bot: Get Daily Schedule")
 
-    return DB_Get_Daily_Schedule()    
+    return database.DB_Get_Daily_Schedule()    
 
 # ====== [ADM] Get All Daily Schedule === 
 def get_All_Daily_Schedule_Logic():
     # if DEBUG:
     #     print("[Logic] Get All Daily Schedule")
-    return DB_All_Get_Daily_Schedule()
+    return database.DB_Get_All_Daily_Schedule()
 
 # == [ADM] Show Content Daily Schedule == 
 def show_Daily_Schedule_Logic(access_code):
     # if DEBUG:
     #     print("[Logic] Show Content Daily Schedule")
-    return DB_Show_Daily_Schedule(access_code)
+    return database.DB_Show_Daily_Schedule(access_code)
 
 # ====== [ADM] Delete Daily Schedule ==== 
 def delete_Daily_Schedule_Logic(access_code):
     # if DEBUG:
     #     print("[Logic] Delete Daily Schedule")
-    return DB_Remove_Daily_Schedule(access_code)
+    return database.DB_Remove_Daily_Schedule(access_code)
 
 # <<<<<<<< END DAILY SCHEDULE >>>>>>>>>>>
 
@@ -725,35 +697,35 @@ def set_Template_Logic(content: str):
     for _ in range(max_attempts):
         access_code = create_Access_Code(6)
         
-        if not DB_Cek_Template(access_code):  
+        if not database.DB_Cek_Template(access_code):  
             break
 
-    return DB_Save_Template(access_code,content,get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S"))
+    return database.DB_Save_Template(access_code,content,get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S"))
     
 # ====== [LOGIC] Get Template =========== 
 def get_Template_Logic(access_code):
     # if DEBUG:
     #     print("[Logic] Bot: Get Template")
 
-    return DB_Get_Template(access_code)    
+    return database.DB_Get_Template(access_code)    
 
 # ====== [LOGIC] Get All Template ======= 
 def get_All_Template_Logic():
     # if DEBUG:
     #     print("[Logic] Get All Template")
-    return DB_All_Get_Template()
+    return database.DB_Get_All_Template()
 
 # ====== [LOGIC] Delete Template ======== 
 def delete_Template_Logic(access_code):
     # if DEBUG:
     #     print("[Logic] Delete Template")
-    return DB_Remove_Template(access_code)
+    return database.DB_Remove_Template(access_code)
 
 # <<<<<<<<<<< END TEMPLATE >>>>>>>>>>>>>>
 
 
 
-# <<<<<<<<<< START TEMPLATE >>>>>>>>>>>>>
+# <<<<<<<<<< START VIP CODE >>>>>>>>>>>>>
 # ====== [LOGIC] Create VIP Access Code ====
 def create_VIP_Code_Logic() -> str:
     # if DEBUG:
@@ -765,11 +737,11 @@ def create_VIP_Code_Logic() -> str:
         random_text = create_Access_Code(11)  
         access_code = f"NV1Px{random_text}"  
         
-        if not DB_Check_VIP_Code(access_code):
+        if not database.DB_Check_VIP_Code(access_code):
             break
     
     now = get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S")
-    DB_Save_VIP_Code(access_code, now)
+    database.DB_Save_VIP_Code(access_code, now)
     
     link = f"https://t.me/gempalokal_bot?start={access_code}"
     
@@ -783,7 +755,7 @@ def activate_VIP_Logic(access_code: str, user_id: str, now):
     if Settings.is_logging():
         logging.info(f"[Logic] Activate VIP for user: {user_id}")
     
-    vip_code = DB_Check_VIP_Code(access_code)
+    vip_code = database.DB_Check_VIP_Code(access_code)
     
     if not vip_code:
         return {
@@ -792,7 +764,7 @@ def activate_VIP_Logic(access_code: str, user_id: str, now):
         }
     
     # Delete code (with race condition protection)
-    result = DB_Delete_VIP_Code(access_code, user_id)
+    result = database.DB_Delete_VIP_Code(access_code, user_id)
     
     if not result["success"]:
         return {
@@ -801,7 +773,7 @@ def activate_VIP_Logic(access_code: str, user_id: str, now):
         }
     
     # Update user VIP status
-    DB_Update_User_VIP(user_id, True, now)
+    database.DB_Update_User_VIP(user_id, True, now)
     
     # Get user info for notification
     user_data = get_User_Logic(user_id)
@@ -819,7 +791,7 @@ def get_All_VIP_Contents_Logic():
     # if DEBUG:
     #     print("[Logic] Get VIP Welcome Package")
     
-    contents = DB_Get_All_VIP_Contents()
+    contents = database.DB_Get_All_VIP_Variable()
 
     if not contents:
         return []
@@ -831,7 +803,7 @@ def get_Latest_VIP_Contents_Logic():
     # if DEBUG:
     #     print("[Logic] Get VIP Welcome Package")
     
-    contents = DB_Get_Latest_VIP_Contents()
+    contents = database.DB_Get_Latest_VIP_Variable()
     
     if not contents:
         return []
@@ -849,13 +821,13 @@ def set_VIP_Variable_Logic(content: str, file_id: str) -> str:
         random_text = create_Access_Code(11)  
         access_code = f"VV1Px{random_text}"  
         
-        if not DB_Check_VIP_Variable(access_code):
+        if not database.DB_Check_VIP_Variable(access_code):
             break
     
     now = get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S")
     link = f"https://t.me/gempalokal_bot?start={access_code}"
     
-    DB_Save_VIP_Variable(access_code, content, file_id, now)
+    database.DB_Save_VIP_Variable(access_code, content, file_id, now)
     
     return link
 
@@ -864,7 +836,7 @@ def get_VIP_Content_Logic(access_code: str):
     # if DEBUG:
     #     print("[Logic] Get VIP Content")
     
-    content_data = DB_Get_VIP_Content(access_code)
+    content_data = database.DB_Get_VIP_Variable(access_code)
     
     if not content_data:
         return {
@@ -878,5 +850,5 @@ def get_VIP_Content_Logic(access_code: str):
         "file_id": content_data.get("file_id")
     }
 
-# <<<<<<<<<<< END TEMPLATE >>>>>>>>>>>>>>
+# <<<<<<<<<<< END VIP CODE >>>>>>>>>>>>>>
  

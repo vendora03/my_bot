@@ -1,8 +1,7 @@
-import sqlite3, logging, os, json, sys
-
+import logging, os, json, sys
+import database
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 restore_json = os.path.join(BASE_DIR, "restore.json")
-db_path = os.path.join(BASE_DIR, "data", "bot_kulu.db")
 
 if not os.path.exists(restore_json):
     print("File Not Found -> restore.json")
@@ -35,53 +34,33 @@ if invalid_keys:
     logging.info("[MANUAL RESTORE] FAILED RESTORE -> Key invalid...")
     print("=============== CANCEL ===============\n")
     sys.exit()
+
+conn = database.DB_Get_Connection()
+if "variables" in data:
+    database.DB_Drop_Table_Variable(conn)    
+    database.DB_Create_Table_Variable(conn)
+    
+if "vip_variables" in data:
+    database.DB_Drop_Table_VIP_Variable(conn)
+    database.DB_Create_Table_VIP_Variable(conn)
+    
+for key, values in data.items():
+    if key == "variables":
+        rows = [
+            (isi["access_code"], isi["content"], isi["file_id"], isi["created_at"])
+            for isi in values
+        ]
+        database.DB_Save_All_Variable(rows, conn)
         
-with sqlite3.connect(db_path) as conn:
-    cursor = conn.cursor()
-    if "variables" in data:
-        cursor.execute("DROP TABLE IF EXISTS variables")
-            
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS variables (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                access_code TEXT NOT NULL UNIQUE ON CONFLICT IGNORE,
-                content TEXT NOT NULL,
-                file_id TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """) 
-    if "vip_variables" in data:
-        cursor.execute("DROP TABLE IF EXISTS vip_variables")
-            
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS vip_variables (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                access_code TEXT NOT NULL UNIQUE ON CONFLICT IGNORE,
-                content TEXT NOT NULL,
-                file_id TEXT,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        """) 
+    elif key == "vip_variables":
+        rows = [
+            (isi["access_code"], isi["content"], isi["file_id"], isi["created_at"])
+            for isi in values
+        ]
+        database.DB_Save_All_VIP_Variable(rows, conn)
         
-    for key, values in data.items():
-        if key == "variables":
-            rows = [
-                (isi["access_code"], isi["content"], isi["file_id"], isi["created_at"])
-                for isi in values
-            ]
-            cursor.executemany("""
-                INSERT INTO variables (access_code, content, file_id, created_at)
-                VALUES (?, ?, ?, ?)
-            """, rows)
-        elif key == "vip_variables":
-            rows = [
-                (isi["access_code"], isi["content"], isi["file_id"], isi["created_at"])
-                for isi in values
-            ]
-            cursor.executemany("""
-                INSERT INTO vip_variables (access_code, content, file_id, created_at)
-                VALUES (?, ?, ?, ?)
-            """, rows)
+conn.commit()
+conn.close()
 
 
 print("=============== RESULT ===============")

@@ -2,7 +2,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.error import TimedOut, BadRequest
 from services.update_user import update_User_Activity_Logic
-from services.proccess_manager import ProccessManager
+# from services.proccess_manager import ProccessManager
 from services.logic import (
     setup_Backup_Logic,
     send_Log_Logic,
@@ -78,8 +78,7 @@ async def user_Start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         #     print(f"[Handlers] Kode: {access_code}")
         await Content_Handler(access_code, update, context)
         return
-        
-        
+           
 async def Content_Handler(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE ):
     # if DEBUG:
     #     print("[Handlers] User: Get Content")
@@ -113,12 +112,9 @@ async def get_Reguler_Content_Handler(access_code: str, update: Update, context:
             file_id = respon.get("file_id")
             content = respon.get("content")
             if file_id:
-                await update.message.reply_photo(
-                    photo=file_id,
-                    caption=content
-                )
+                await update.message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
             else:
-                await update.message.reply_text(content, disable_web_page_preview=True)
+                await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
         else:
             await update.message.reply_text(f"❌ <i><b>Not Found...</b></i>",parse_mode="HTML")
             
@@ -152,14 +148,14 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
         if Settings.is_logging():
             logging.info(f"[Handlers] VIP Activation: {access_code}")
         
-        msg = await update.message.reply_text("<i>Checking...</i>",parse_mode="HTML")
+        msg = await update.message.reply_text("<i>Checking...</i>", parse_mode="HTML")
         user_data = get_User_Logic(user_data.user_id)
         if user_data.is_vip:
             dt = datetime.datetime.strptime(user_data.vip_created, "%Y-%m-%d %H:%M:%S")
             new_date = dt.strftime("%H:%M:%S %d-%m-%Y")
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text(f"ℹ️ <i>Akun Sudah VIP\nTime: {new_date}\nPendaftaran Dibatalkan.</i>",parse_mode="HTML")
+            await update.message.reply_text(f"ℹ️ <i>Akun Sudah VIP\nTime: {new_date}\nPendaftaran Dibatalkan.</i>", parse_mode="HTML")
             return
         
         vip_created = get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S")
@@ -168,7 +164,7 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
         if not result["success"]:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text(result["message"],parse_mode="HTML")
+            await update.message.reply_text(result["message"], parse_mode="HTML")
             return
             
         # Notify admin
@@ -194,7 +190,7 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         await send_VIP_All_Package_Handler(update, context)
-        await update.message.reply_text("✅ <i><b>Anda Sekarang VIP!\nGunakan Menu Baru</b></i>",parse_mode="HTML")
+        await update.message.reply_text("✅ <i><b>Anda Sekarang VIP!\nGunakan Menu Baru</b></i>", parse_mode="HTML")
         await set_commands_for_user(context, user_data)
         file, info = setup_Backup_Logic()
         await send_Backup_To_Admin_Logic(context, file, info)
@@ -230,13 +226,13 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
         #     print(f"[Handlers] VIP Content Access: {access_code}")
         user_data = update_User_Activity_Logic(update.effective_user)
         await cek_Subscribe_Logic(update, context, user_data.user_id)
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
+        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         if not user_data.is_vip:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             reply =Settings.get_vip_info()
-            await update.message.reply_text(reply ,parse_mode="HTML")
+            await update.message.reply_text(reply, parse_mode="HTML")
             return
         
         result = get_VIP_Content_Logic(access_code)
@@ -244,10 +240,7 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
         if not result["success"]:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text(
-                result.get("message","❌ Tidak Dapat Akses VIP"),
-                parse_mode="HTML"
-            )
+            await update.message.reply_text(result.get("message","❌ Tidak Dapat Akses VIP"), parse_mode="HTML")
             return
         
         # Send VIP content
@@ -257,10 +250,7 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
         if file_id:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_photo(
-                photo=file_id,
-                caption=content
-            )
+            await update.message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
         else:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
@@ -299,20 +289,20 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
         #     print(f"[Handlers] Sending All VIP Contents")
         
         await cek_Subscribe_Logic(update, context, user_data.user_id)
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
+        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
                 
         if not user_data.is_vip:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             reply =Settings.get_vip_info()
-            await update.message.reply_text(reply ,parse_mode="HTML")
+            await update.message.reply_text(reply, parse_mode="HTML")
             return
 
         package = get_All_VIP_Contents_Logic()
 
         if not package:
             await msg.delete()
-            await update.message.reply_text("⚠️ <i><b>Konten VIP Tidak Tersedia...</b></i>",parse_mode="HTML")
+            await update.message.reply_text("⚠️ <i><b>Konten VIP Tidak Tersedia...</b></i>", parse_mode="HTML")
             return
         
         if msg and getattr(msg, "message_id", None):
@@ -324,7 +314,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
             content = item.get("content")
             
             if file_id:
-                await update.message.reply_photo(photo=file_id,caption=content)
+                await update.message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
             else:
                 await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
             await asyncio.sleep(1)
@@ -359,13 +349,13 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
         # if DEBUG:
         #     print(f"[Handlers] Get Latest VIP Content")
         await cek_Subscribe_Logic(update, context, user_data.user_id)
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
+        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         if not user_data.is_vip:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             reply =Settings.get_vip_info()
-            await update.message.reply_text(reply ,parse_mode="HTML")
+            await update.message.reply_text(reply, parse_mode="HTML")
             return
         
         result = get_Latest_VIP_Contents_Logic()
@@ -373,7 +363,7 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
         if not result:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text("⚠️ <i><b>Konten VIP Tidak Tersedia...</b></i>",parse_mode="HTML")
+            await update.message.reply_text("⚠️ <i><b>Konten VIP Tidak Tersedia...</b></i>", parse_mode="HTML")
             return
         
         # Send VIP content
@@ -383,7 +373,7 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if file_id:
-            await update.message.reply_photo(photo=file_id,caption=content)
+            await update.message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
         else:
             await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
             
@@ -408,6 +398,8 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
             except BadRequest:
                 pass
 
+
+
 # ====== Handle PING =======================
 # @proccess_handling
 async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -417,7 +409,7 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # await cek_Subscribe_Logic(update, context, user_data.user_id)
         start = time.time()
         
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
+        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         end = time.time()
         ping_ms = int((end - start) * 1000)
@@ -454,7 +446,7 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
-        await update.message.reply_text(massage_uptime,parse_mode="HTML") 
+        await update.message.reply_text(massage_uptime, parse_mode="HTML") 
         # if DEBUG:
         #     massage_debug = (
         #                     f"🚀 {'StartUP':10}: {startup_text}\n"
@@ -494,7 +486,7 @@ async def tutorial_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         user_data = update_User_Activity_Logic(update.effective_user)
         await cek_Subscribe_Logic(update, context, user_data.user_id)
         
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
+        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         # if DEBUG:
         #     print("[Handlers] User: Tutorial")

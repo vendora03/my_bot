@@ -1,5 +1,5 @@
 from datetime import datetime
-from services.database import DB_Set_Bot_Settings, DB_Get_Bot_Settings
+import database 
 from config import SETTINGS_SCHEMA
 class Settings:
     _cache = {}
@@ -8,13 +8,13 @@ class Settings:
     @classmethod
     def _load(cls, key: str, default=None):
         if key not in cls._cache:
-            value = DB_Get_Bot_Settings(key)
+            value = database.DB_Get_Bot_Settings(key)
             cls._cache[key] = value if value is not None else default
         return cls._cache[key]
 
     @classmethod
     def _set(cls, key: str, value):
-        DB_Set_Bot_Settings(key, str(value), datetime.now())
+        database.DB_Set_Bot_Settings(key, str(value), datetime.now())
         cls._cache[key] = str(value)
         
     @staticmethod
