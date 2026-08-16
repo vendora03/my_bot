@@ -1,4 +1,4 @@
-import pytz, bot_instance
+import pytz
 import time as waktu
 from datetime import time
 from telegram import Update
@@ -123,7 +123,6 @@ def main():
         
     # build application
     app = Application.builder().token(BOT_TOKEN).concurrent_updates(True).build()
-    bot_instance.bot = app.bot
     app.post_init = Logic_On_Startup
 
     # Maintenance Handler

@@ -1,7 +1,8 @@
-import random, string, pytz, json, os, logging
+import random, string, pytz, json, os, logging, asyncio
 from datetime import datetime, timedelta
 from io import BytesIO
 from services.settings import Settings
+from services import database
 from telegram.error import NetworkError, TimedOut, BadRequest
 from telegram import BotCommand, BotCommandScopeDefault, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup
 from config import (
@@ -14,8 +15,60 @@ from config import (
     PROMPT, 
     SETTINGS_SCHEMA,
     DEFAULT_SETTINGS)
-from services import database
 
+async def bot_listener(app, reader, writer):
+    try:
+        data = await reader.read(4096)
+        data = json.loads(data.decode("utf-8"))
+
+        
+        if data["action"] == "send_message":
+            file_id = data.get("file_id")
+            if not file_id or file_id == "None":
+                await app.bot.send_message(
+                    chat_id=ADMIN_IDS,
+                    text=data["message"],
+                    parse_mode="HTML"
+                )
+            else:            
+                file = await app.bot.get_file(file_id)
+            
+                file_path = file.file_path.lower()
+            
+                if file_path.endswith((".jpg", ".jpeg", ".png", ".webp")):
+                    await app.bot.send_photo(
+                        chat_id=ADMIN_IDS,
+                        photo=file_id,
+                        caption=data["message"],
+                        parse_mode="HTML"
+                    )
+            
+                elif file_path.endswith((".zip", ".rar", ".7z", ".txt", ".pdf")):
+                    await app.bot.send_document(
+                        chat_id=ADMIN_IDS,
+                        document=file_id,
+                        caption=data["message"],
+                        parse_mode="HTML"
+                    )
+            
+                else:
+                    await app.bot.send_message(
+                        chat_id=ADMIN_IDS,
+                        text=data["message"],
+                        parse_mode="HTML"
+                    )
+
+        writer.write(b"OK")
+        await writer.drain()
+
+    except Exception as e:
+        writer.write(str(e).encode("utf-8"))
+        await writer.drain()
+
+    finally:
+        writer.close()
+        await writer.wait_closed()
+        
 def Logic_init_settings():
     for key, value in DEFAULT_SETTINGS.items():
         Settings.set(key, value)
@@ -54,6 +107,14 @@ async def Logic_On_Startup(app):
         )
     await Logic_Restore_From_Channel(app)
     await Logic_Set_Base_User_Commands(app)
+    
+    asyncio.create_task(
+        asyncio.start_server(
+            lambda reader, writer: bot_listener(app, reader, writer),
+            "127.0.0.1",
+            8765
+        )
+    )
 
 async def Logic_Set_Base_User_Commands(app):
     commands = [
