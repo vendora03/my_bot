@@ -5,7 +5,7 @@ from datetime import datetime, timedelta
 
 
 def maintenance(state):
-    state = state.lower()
+    state = str(state).lower()
     settings = Set.Settings()
     if state == "true":
         if settings.get("maintenance") == state:
