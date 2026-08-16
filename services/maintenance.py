@@ -17,8 +17,8 @@ def maintenance(state):
         maintenance_start = str(int(time.time()))
         waktu_mulai = datetime.fromtimestamp(int(maintenance_start))
         settings.set("maintenance_start", maintenance_start)
-        print(f"[INFO] BOT IN MAINTENANCE MODE\nTime: {waktu_mulai.strftime("%d/%m/%Y %H:%M:%S")}")
-        asyncio.run(Send_Message_Admin(f"<b>[INFO] BOT IN MAINTENANCE MODE</b>\nTime: {waktu_mulai.strftime("%d/%m/%Y %H:%M:%S")}"))
+        print(f"[INFO] BOT IN MAINTENANCE MODE\nTime: {waktu_mulai.strftime('%d/%m/%Y %H:%M:%S')}")
+        asyncio.run(Send_Message_Admin(f"<b>[INFO] BOT IN MAINTENANCE MODE</b>\nTime: {waktu_mulai.strftime('%d/%m/%Y %H:%M:%S')}"))
     else:
         maintenance_start = int(settings.get("maintenance_start"))
         raw_durasi = int(time.time()) - maintenance_start
