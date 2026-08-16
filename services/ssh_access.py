@@ -14,7 +14,8 @@ def response(status, message, data=None):
 
     if data is not None:
         result["data"] = data
-
+    else:
+        result["data"]
     print(json.dumps(result))
 
 match task:
@@ -36,13 +37,15 @@ match task:
         else:
             response(
                 "error",
-                "key tidak dikenal"
+                "key tidak dikenal",
+                ""
             )
     case "post_data":
         if key not in ["variables", "vip_variables"]:
             response(
                 "error",
-                "key tidak dikenal"
+                "key tidak dikenal",
+                ""
             )
             sys.exit()
         conn = database.DB_Get_Connection()
@@ -70,13 +73,15 @@ match task:
             conn.commit()
             response(
                 "success",
-                "data berhasil disimpan"
+                "data berhasil disimpan",
+                ""
             )
         except Exception as e:
             conn.rollback()
             response(
                 "error",
-                str(e)
+                str(e),
+                ""
             )
         finally:
             conn.close()
@@ -84,7 +89,8 @@ match task:
         if key not in ["variables", "vip_variables"]:
             response(
                 "error",
-                "key tidak dikenal"
+                "key tidak dikenal",
+                ""
             )
             sys.exit()
         
@@ -106,18 +112,21 @@ match task:
             
             response(
                 "success",
+                "Berhasil Menambah Data",
                 result
             )
         except Exception as e:
             conn.rollback()
             response(
                 "error",
-                str(e)
+                str(e),
+                ""
             )
         finally:
             conn.close()
     case _:
         response(
             "error",
-            "task tidak dikenal"
+            "task tidak dikenal",
+            ""
         )
