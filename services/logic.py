@@ -95,6 +95,8 @@ async def Logic_error_handler(update, context):
 def Logic_Format_Help():
     lines = ["format penggunaan:"]
     for key, t in SETTINGS_SCHEMA.items():
+        if key == "maintenance_start":
+            continue
         if t == "bool":
             lines.append(f"/settings {key} true|false")
         else:
@@ -150,7 +152,7 @@ def User_Commands(user: database.User) -> list[BotCommand]:
         ("broadcast", "Buat Broadcast"),
         
         ("settings", "Pengaturan Bot"),
-        ("maintenance", "Maintenance Bot")
+        ("maintenance", "Maintenance Bot"),
         ("log", "Get Log Data"),
         ("backup", "Backup Database"),
         ("restore", "Restore Database"),
@@ -382,6 +384,7 @@ def Send_Message_Admin(message, file_id):
     data = {"message": message, "file_id": file_id}
     with open(MESSAGE_FILE, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
+
 # <<<<<<<<<< END ADMIN >>>>>>>>>>>>>>
 
 

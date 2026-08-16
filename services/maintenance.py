@@ -7,18 +7,29 @@ from datetime import datetime, timedelta
 def maintenance(state):
     state = state.lower()
     settings = Set.Settings()
-    settings.set("maintenance", state)
     if state == "true":
+        if settings.get("maintenance") == "true":
+            maintenance_start = int(settings.get("maintenance_start"))
+            raw_durasi = int(time.time()) - maintenance_start
+            durasi = str(timedelta(seconds=raw_durasi))
+            print(f"==============================\n[INFO] BOT ALREADY IN MAINTENANCE\nDuration: {durasi}\n==============================")    
+            Send_Message_Admin(f"<b>[INFO] BOT ALREADY IN MAINTENANCE</b>\nDuration: {durasi}", None)
+        
+        settings.set("maintenance", state)
         maintenance_start = str(int(time.time()))
         waktu_mulai = datetime.fromtimestamp(int(maintenance_start))
         settings.set("maintenance_start", maintenance_start)
-        print(f"[INFO] BOT IN MAINTENANCE MODE\nTime: {waktu_mulai.strftime('%d/%m/%Y %H:%M:%S')}")
+        print(f"==============================\n[INFO] BOT IN MAINTENANCE MODE\nTime: {waktu_mulai.strftime('%d/%m/%Y %H:%M:%S')}\n==============================")
         Send_Message_Admin(f"<b>[INFO] BOT IN MAINTENANCE MODE</b>\nTime: {waktu_mulai.strftime('%d/%m/%Y %H:%M:%S')}", None)
     else:
+        if settings.get("maintenance") == "false":
+            print(f"==========================\n[INFO] BOT IN WORKING MODE\n==========================")
+            Send_Message_Admin(f"<b>[INFO] BOT IN WORKING MODE</b>", None)
+        
         maintenance_start = int(settings.get("maintenance_start"))
         raw_durasi = int(time.time()) - maintenance_start
         durasi = str(timedelta(seconds=raw_durasi))
-        print(f"[INFO] BOT IN WORKING MODE\nDuration: {durasi}")
+        print(f"==========================\n[INFO] BOT IN WORKING MODE\nDuration: {durasi}\n==========================")
         settings.set("maintenance_start", "")
         Send_Message_Admin(f"<b>[INFO] BOT IN WORKING MODE</b>\nDuration: {durasi}", None)
 
