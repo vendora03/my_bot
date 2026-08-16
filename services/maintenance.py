@@ -1,4 +1,4 @@
-import settings as Set
+from services import settings as Set
 import sys
 
 if len(sys.argv) > 2:
