@@ -37,7 +37,8 @@ async def Logic_Cek_Request(context):
                 await context.bot.send_message(
                     chat_id=admin_id,
                     text=data["message"],
-                    parse_mode="HTML"
+                    parse_mode="HTML",
+                    disable_web_page_preview=True
                 )
             data = {"message": "", "file_id": None}
             with open(MESSAGE_FILE, "w", encoding="utf-8") as file:
@@ -71,7 +72,8 @@ async def Logic_Cek_Request(context):
                 await context.bot.send_message(
                     chat_id=admin_id,
                     text=data["message"],
-                    parse_mode="HTML"
+                    parse_mode="HTML",
+                    disable_web_page_preview=True
                 )
 
         data = {"message": "", "file_id": None}

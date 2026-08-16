@@ -211,7 +211,14 @@ def DB_Save_Variable(content, access_code, file_id, now):
     conn = DB_Get_Connection()
     cursor = conn.cursor()
 
-    cursor.execute("INSERT INTO variables (access_code, content, file_id, created_at) VALUES (?, ?, ?, ?)", (access_code, content, file_id, now))
+    cursor.execute("""
+            INSERT INTO variables (access_code, content, file_id, created_at) 
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(key) DO UPDATE SET
+                content = excluded.content,
+                file_id = excluded.file_id,
+                updated_at = excluded.created_at
+        """, (access_code, content, file_id, now))
 
     conn.commit()
     # if DEBUG:
@@ -481,7 +488,10 @@ def DB_Save_Template(access_code,content,now):
     conn = DB_Get_Connection()
     cursor = conn.cursor()
 
-    cursor.execute("INSERT INTO template (access_code, content, created_at) VALUES (?, ?, ?)", (access_code,content,now))
+    cursor.execute("""
+            INSERT INTO template (access_code, content, created_at) 
+            VALUES (?, ?, ?)
+        """, (access_code,content,now))
 
     conn.commit()
     # if DEBUG:
@@ -729,6 +739,10 @@ def DB_Save_VIP_Variable(access_code, content, file_id, now):
     cursor.execute("""
         INSERT INTO vip_variables (access_code, content, file_id, created_at) 
         VALUES (?, ?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET
+            content = excluded.content,
+            file_id = excluded.file_id,
+            created_at = excluded.created_at
     """, (access_code, content, file_id, now))
     
     conn.commit()
