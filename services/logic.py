@@ -39,8 +39,9 @@ async def Logic_Cek_Request(context):
                     text=data["message"],
                     parse_mode="HTML"
                 )
+            data = {"message": "", "file_id": None}
             with open(MESSAGE_FILE, "w", encoding="utf-8") as file:
-                json.dump({}, file)
+                json.dump(data, file, ensure_ascii=False, indent=4)
             return
         
         file = await context.bot.get_file(file_id)
@@ -73,8 +74,9 @@ async def Logic_Cek_Request(context):
                     parse_mode="HTML"
                 )
 
+        data = {"message": "", "file_id": None}
         with open(MESSAGE_FILE, "w", encoding="utf-8") as file:
-            json.dump({}, file)
+            json.dump(data, file, ensure_ascii=False, indent=4)
 
     except Exception as e:
         logging.error(f"[MESSAGE REQUEST] {e}")
