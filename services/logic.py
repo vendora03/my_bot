@@ -39,6 +39,8 @@ async def Logic_Cek_Request(context):
                     text=data["message"],
                     parse_mode="HTML"
                 )
+            with open(MESSAGE_FILE, "w", encoding="utf-8") as file:
+                json.dump({}, file)
             return
         
         file = await context.bot.get_file(file_id)
