@@ -9,19 +9,19 @@ key = sys.argv[2] if len(sys.argv) > 2 else None
 
 async def Send_Message_Admin(message, file_id):
     if not file_id or file_id == "None":
-        await bot_instance.send_message(
+        await bot_instance.bot.send_message(
             chat_id=ADMIN_IDS,
             text=message,
             parse_mode="HTML"
         )
         return
     
-    file = await bot_instance.get_file(file_id)
+    file = await bot_instance.bot.get_file(file_id)
 
     file_path = file.file_path.lower()
 
     if file_path.endswith((".jpg", ".jpeg", ".png", ".webp")):
-        await bot_instance.send_photo(
+        await bot_instance.bot.send_photo(
             chat_id=ADMIN_IDS,
             photo=file_id,
             caption=message,
@@ -29,7 +29,7 @@ async def Send_Message_Admin(message, file_id):
         )
 
     elif file_path.endswith((".zip", ".rar", ".7z", ".txt", ".pdf")):
-        await bot_instance.send_document(
+        await bot_instance.bot.send_document(
             chat_id=ADMIN_IDS,
             document=file_id,
             caption=message,
@@ -37,7 +37,7 @@ async def Send_Message_Admin(message, file_id):
         )
 
     else:
-        await bot_instance.send_message(
+        await bot_instance.bot.send_message(
             chat_id=ADMIN_IDS,
             text=message,
             parse_mode="HTML"

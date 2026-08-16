@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from config import ADMIN_IDS
 
 async def Send_Message_Admin(message):
-    await bot_instance.send_message(
+    await bot_instance.bot.send_message(
         chat_id=ADMIN_IDS,
         text=message,
         parse_mode="HTML"
