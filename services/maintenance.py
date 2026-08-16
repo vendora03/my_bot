@@ -14,6 +14,7 @@ def maintenance(state):
             durasi = str(timedelta(seconds=raw_durasi))
             print(f"==============================\n[INFO] BOT ALREADY IN MAINTENANCE\nDuration: {durasi}\n==============================")    
             Send_Message_Admin(f"<b>[INFO] BOT ALREADY IN MAINTENANCE</b>\nDuration: {durasi}", None)
+            return
         
         settings.set("maintenance", state)
         maintenance_start = str(int(time.time()))
@@ -25,6 +26,7 @@ def maintenance(state):
         if settings.get("maintenance") == "false":
             print(f"==========================\n[INFO] BOT IN WORKING MODE\n==========================")
             Send_Message_Admin(f"<b>[INFO] BOT IN WORKING MODE</b>", None)
+            return
         
         maintenance_start = int(settings.get("maintenance_start"))
         raw_durasi = int(time.time()) - maintenance_start
