@@ -32,7 +32,7 @@ async def Logic_Cek_Request(context):
         if not message:
             return
 
-        if not file_id or file_id == "None":
+        if not file_id or file_id == "None" or file_id == "null":
             await context.bot.send_message(
                 chat_id=ADMIN_IDS,
                 text=data["message"],

@@ -17,7 +17,8 @@ from services.logic import (
     Logic_Send_Backup_To_Admin,
     Logic_Send_Backup_To_Channel,
     Logic_Send_Log,
-    Logic_Backup_To_Channel_Job)
+    Logic_Backup_To_Channel_Job,
+    Logic_Cek_Request)
 from handlers.user import (
     user_Start_Handler,
     ping_Handler,
@@ -169,7 +170,7 @@ def main():
 
     app.job_queue.run_repeating(generate_tip_job, interval=216000)
     app.job_queue.run_repeating(Logic_Backup_To_Channel_Job, interval=3600)
-    
+    app.job_queue.run_repeating(Logic_Cek_Request, interval=2)
     tz = pytz.timezone(TIMEZONE)
     scheduled_time = time(hour=0, minute=1, tzinfo=tz)  
     app.job_queue.run_daily(daily_Task, scheduled_time) 
