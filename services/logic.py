@@ -16,7 +16,6 @@ from config import (
     DEFAULT_SETTINGS)
 from services import database
 
-
 def Logic_init_settings():
     for key, value in DEFAULT_SETTINGS.items():
         Settings.set(key, value)

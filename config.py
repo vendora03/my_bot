@@ -52,6 +52,7 @@ PROMPT = os.getenv("GEMINi")
 DEBUG = False
 
 # ==== GET SETTINGS ====
+IS_MAINTENANCE = os.getenv("IS_MAINTENANCE", "false").lower() 
 IS_LOG = os.getenv("IS_LOG", "false").lower() 
 TUTORIAL_INFO = "https://telegra.ph/All-You-Need-02-02"
 START_INFO_STATE = os.getenv("DAILY_UPDATE", "false").lower() 
@@ -64,6 +65,7 @@ TIPS = os.getenv("TIPS","Tidak Ada Tips")
 
 # ==== SET SETTINGS ====
 DEFAULT_SETTINGS = {
+    "maintenance": IS_LOG,
     "debug": IS_LOG,
     "tutorial_info": TUTORIAL_INFO,
     "start_info_state": START_INFO_STATE,
