@@ -17,12 +17,12 @@ from config import (
 from services import database
 
 
-def init_settings():
+def Logic_init_settings():
     for key, value in DEFAULT_SETTINGS.items():
         Settings.set(key, value)
         
 # <<<<<<<<<< ERROR Handler >>>>>>>>>>>>>>
-async def error_handler(update, context):
+async def Logic_error_handler(update, context):
     err = context.error
 
     if isinstance(err, TimedOut):
@@ -36,7 +36,7 @@ async def error_handler(update, context):
     if Settings.is_logging():
         logging.info(f"ERROR: {err}")
 
-def format_Help_Logic():
+def Logic_Format_Help():
     lines = ["format penggunaan:"]
     for key, t in SETTINGS_SCHEMA.items():
         if t == "bool":
@@ -46,17 +46,17 @@ def format_Help_Logic():
     return "\n".join(lines)
 
 # <<<<<<<<<< START GENERAL >>>>>>>>>>>>>>
-async def on_Startup(app):
+async def Logic_On_Startup(app):
     for id_chat in ADMIN_IDS:
         await app.bot.send_message(
             chat_id=id_chat,
-            text=f"🚀 Bot Start Up\nTime: {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}",
+            text=f"🚀 Bot Start Up\nTime: {Logic_Get_Time().strftime('%H:%M:%S %d-%m-%Y')}",
             parse_mode="HTML"
         )
-    await restore_From_Channel_Pin_Logic(app)
-    await set_Base_User_Commands(app)
+    await Logic_Restore_From_Channel(app)
+    await Logic_Set_Base_User_Commands(app)
 
-async def set_Base_User_Commands(app):
+async def Logic_Set_Base_User_Commands(app):
     commands = [
         BotCommand("start", "Mulai bot"),
         BotCommand("ping", "Uptime Bot"),
@@ -66,8 +66,8 @@ async def set_Base_User_Commands(app):
         scope=BotCommandScopeDefault()
     )
        
-async def set_commands_for_user(app, user: database.User):
-    commands = build_Commands_User(user)
+async def Logic_Set_Next_User_Commands(app, user: database.User):
+    commands = User_Commands(user)
 
     await app.bot.set_my_commands(
         commands=commands,
@@ -75,7 +75,7 @@ async def set_commands_for_user(app, user: database.User):
         language_code=None
     )
  
-def build_Commands_User(user: database.User) -> list[BotCommand]:
+def User_Commands(user: database.User) -> list[BotCommand]:
     BASE_USER_COMMANDS = [
         ("start", "Mulai bot"),
         ("ping", "Uptime Bot"),
@@ -135,7 +135,7 @@ def build_Commands_User(user: database.User) -> list[BotCommand]:
 
     return commands
  
-def build_Join_Button_Logic():
+def Join_Button():
     buttons = []
     
     raw_group = Settings.get_group()  
@@ -158,14 +158,14 @@ def build_Join_Button_Logic():
     
     return InlineKeyboardMarkup(buttons)
 
-async def is_user_joined(app, user_id: int, chat_id: str) -> bool:
+async def Is_User_Joined(app, user_id: int, chat_id: str) -> bool:
     try:
         member = await app.bot.get_chat_member(chat_id, user_id)
         return member.status in ("member", "administrator", "creator")
     except BadRequest:
         return False
     
-async def cek_Subscribe_Logic(update, context, user_id) -> bool:
+async def Logic_Set_Join_Button(update, context, user_id) -> bool:
     if not Settings.start_info_enabled():
         return True
 
@@ -177,8 +177,8 @@ async def cek_Subscribe_Logic(update, context, user_id) -> bool:
     id_groups = groups[0::2]          
 
     for id_group in id_groups:
-        if not await is_user_joined(context, user_id, int(id_group)):
-            keyboard = build_Join_Button_Logic()
+        if not await Is_User_Joined(context, user_id, int(id_group)):
+            keyboard = Join_Button()
             start_info = Settings.get_start_info()
             if "@user" in start_info:
                 await update.message.reply_text(
@@ -199,7 +199,7 @@ async def cek_Subscribe_Logic(update, context, user_id) -> bool:
   
       
 # <<<<<<<<<< START ADMIN >>>>>>>>>>>>>>
-async def send_Log_Logic(context):
+async def Logic_Send_Log(context):
     file = "app.log"
     
     if not os.path.exists(file):
@@ -213,12 +213,12 @@ async def send_Log_Logic(context):
         return
 
     text = (
-        f"<b>📝 Log\nTime:</b> {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
+        f"<b>📝 Log\nTime:</b> {Logic_Get_Time().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
     )
     for admin_id in ADMIN_IDS:
         await context.bot.send_document(chat_id=admin_id,document=file,caption=text,parse_mode="HTML")
     
-async def send_Backup_To_Admin_Logic(context, file, info):
+async def Logic_Send_Backup_To_Admin(context, file, info):
     file.seek(0)
     
     for admin_id in ADMIN_IDS:
@@ -237,7 +237,7 @@ async def send_Backup_To_Admin_Logic(context, file, info):
         
         file.seek(0)
     
-async def send_Backup_To_Channel_Logic(context, file, info):
+async def Logic_Send_Backup_To_Channel(context, file, info):
     if not CHANNEL_ID:
         for admin_id in ADMIN_IDS:
             await context.bot.send_message(
@@ -270,7 +270,7 @@ async def send_Backup_To_Channel_Logic(context, file, info):
         if Settings.is_logging():
             logging.error(f"[BACKUP] Failed to send to channel: {e}")
         
-async def restore_From_Channel_Pin_Logic(app):
+async def Logic_Restore_From_Channel(app):
     if not CHANNEL_ID:
         for admin_id in ADMIN_IDS:
             await app.bot.send_message(
@@ -301,7 +301,7 @@ async def restore_From_Channel_Pin_Logic(app):
         
         await new_file.download_to_drive(BACKUP_PATH)
         
-        result = restore_Backup_Logic()
+        result = Logic_Restore_Backup()
                 
         if result:
             for admin_id in ADMIN_IDS:
@@ -314,15 +314,15 @@ async def restore_From_Channel_Pin_Logic(app):
         if Settings.is_logging():
             logging.error(f"[RESTORE] Failed To Restore Backup From Channel: {e}")
 
-async def backup_to_channel_job(context):
-    file, info = setup_Backup_Logic()
-    await send_Backup_To_Channel_Logic(context, file, info)
-    
+async def Logic_Backup_To_Channel_Job(context):
+    file, info = Logic_Setup_Backup()
+    await Logic_Send_Backup_To_Channel(context, file, info)
+
 # <<<<<<<<<< END ADMIN >>>>>>>>>>>>>>
 
 
-# ====== Backup To Json Logic =========== 
-def setup_Backup_Logic():
+# ====== [LOGIC] Set Backup  ============ 
+def Logic_Setup_Backup():
     data = database.DB_Backup()
 
     json_bytes = json.dumps(
@@ -335,7 +335,7 @@ def setup_Backup_Logic():
     file.name = "backup.json"
     
     info = (
-        f"<b>📦 Backup:</b> {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
+        f"<b>📦 Backup:</b> {Logic_Get_Time().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
         f"Users: <b>{len(data.get('users', []))}</b> row\n"
         f"Schedule: <b>{len(data.get('daily_schedule', []))}</b> row\n"
         f"Template: <b>{len(data.get('template', []))}</b> row\n"
@@ -347,8 +347,8 @@ def setup_Backup_Logic():
     
     return file,info
 
-# ====== Restore Backup Logic =========== 
-def restore_Backup_Logic():
+# ====== [LOGIC] Restore Backup ========= 
+def Logic_Restore_Backup():
     if not os.path.exists(BACKUP_PATH):
         # if DEBUG:
         #     print("[BACKUP] Backup Aborted: Path Not Found")
@@ -448,19 +448,19 @@ def restore_Backup_Logic():
         return f"<b>!!!Restored Failed!!!</b>"
     
 # ====== Get Current Time =============== 
-def get_Time_Logic():
+def Logic_Get_Time():
     tz = pytz.timezone(TIMEZONE)
     now = datetime.now(tz)
     return now
 
-# ====== Create Access Code ============= 
-def create_Access_Code(panjang: int) -> str:
+# ====== [Create Access Code ============= 
+def Create_Access_Code(panjang: int) -> str:
     karakter = string.ascii_uppercase + string.ascii_lowercase + string.digits
     random_text = ''.join(random.choice(karakter) for _ in range(panjang))
     return random_text  
     
-# ====== Generate AI Tips =============== 
-def generate_Tip_Logic() -> str:
+# ====== [LOGIC] Generate AI Tips ======= 
+def Logic_Generate_Tips() -> str:
     if Settings.is_logging():
         logging.info("[Logic] Generate Tips")
         
@@ -493,12 +493,12 @@ def generate_Tip_Logic() -> str:
             logging.error(f"[Logic] Generate Failed!!!: {e}")
         return "Tidak Ada Tips!!"
     
-# ====== [ADM] Call Broadcast =========== 
-def do_Broadcast_Logic():
+# ====== [LOGIC] Call Broadcast ========= 
+def Logic_Broadcast():
     # if DEBUG:
     #     print("[Logic] Admin: Do Broadcast")
         
-    return get_All_User_Logic()
+    return Logic_Get_All_User()
 
 # <<<<<<<<<<< END GENERAL >>>>>>>>>>>>>>>
  
@@ -508,26 +508,26 @@ def do_Broadcast_Logic():
 # <<<<<<<<<<<< START USER >>>>>>>>>>>>>>>
 
 # ====== Save User ====================== 
-def set_User_Logic(user_model: database.User):
+def Logic_Set_User(user_model: database.User):
     # if DEBUG:
     #     print("[Logic] Admin: Set User")
         
     database.DB_Save_User(user_model)
     return
 
-def get_User_Logic(user_id: str) -> database.User:
+def Logic_Get_User(user_id: str) -> database.User:
     # if DEBUG:
     #     print("[Logic] Admin: Get User")
         
     return database.DB_Get_User(user_id)
 
-def get_All_User_Logic():
+def Logic_Get_All_User():
     # if DEBUG:
     #     print("[Logic] Admin: Get All User")
         
     return database.DB_Get_All_User()
 
-def user_Statistic_Logic(users: list[dict]) -> str:
+def Logic_User_Statistic(users: list[dict]) -> str:
     tz = pytz.timezone(TIMEZONE)
     now = datetime.now(tz)
 
@@ -594,8 +594,8 @@ def user_Statistic_Logic(users: list[dict]) -> str:
 
 # <<<<<<<<<< START VARIABLE >>>>>>>>>>>>>
 
-# ====== Save Variable ================== 
-def set_Variable_Logic(content: str, file_id: str) -> str:
+# ====== [LOGIC] Save Variable ========== 
+def Logic_Set_Variable(content: str, file_id: str) -> str:
     # if DEBUG:
     #     print("[Logic] Admin: Set Variable")
         
@@ -604,17 +604,17 @@ def set_Variable_Logic(content: str, file_id: str) -> str:
     max_attempts = 1000  
     code_len = 16 - (len(str(index)) > 2)
     for _ in range(max_attempts):
-        access_code = f"N0cTRaA{index}{create_Access_Code(code_len)}P0"
+        access_code = f"N0cTRaA{index}{Create_Access_Code(code_len)}P0"
         
         if not database.DB_Cek_Variable(access_code):  
             break
         
     link = f"https://t.me/gempalokal_bot?start={access_code}"
-    database.DB_Save_Variable(content, access_code, file_id, get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S"))
+    database.DB_Save_Variable(content, access_code, file_id, Logic_Get_Time().strftime("%Y-%m-%d %H:%M:%S"))
     return link
 
-# ====== [ADM] Get Content Variable ===== 
-def get_Content_Logic(access_code: str) -> str:
+# ====== [LOGIC] Get Variable ===========
+def Logic_Get_Variable(access_code: str) -> str:
     # if DEBUG:
     #     print("[Logic] Get Content")
         
@@ -626,41 +626,41 @@ def get_Content_Logic(access_code: str) -> str:
 
 # <<<<<<<< START DAILY SCHEDULE >>>>>>>>>
 
-# ====== Save Daily Schedule ============ 
-def set_Daily_Schedule_Logic(content: str, file_id: str) -> str:
+# ====== [LOGIC] Save Daily Schedule ====
+def Logic_Set_Daily_Schedule(content: str, file_id: str) -> str:
     # if DEBUG:
     #     print("[Logic] Admin: Set Daily Schedule")
     max_attempts = 1000  
 
     for _ in range(max_attempts):
-        access_code = create_Access_Code(6)
+        access_code = Create_Access_Code(6)
         
         if not database.DB_Cek_Daily_Schedule(access_code):  
             break
         
-    return database.DB_Save_Daily_Schedule(access_code, content, file_id, get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S"))
+    return database.DB_Save_Daily_Schedule(access_code, content, file_id, Logic_Get_Time().strftime("%Y-%m-%d %H:%M:%S"))
     
-# ====== [Auto] Get Daily Schedule ====== 
-def get_Daily_Schedule_Logic():
+# ====== [LOGIC] Get Daily Schedule ===== 
+def Logic_Get_Daily_Schedule():
     # if DEBUG:
     #     print("[Logic] Bot: Get Daily Schedule")
 
     return database.DB_Get_Daily_Schedule()    
 
-# ====== [ADM] Get All Daily Schedule === 
-def get_All_Daily_Schedule_Logic():
+# ====== [LOGIC] Get All Daily Schedule = 
+def Logic_Get_All_Daily_Schedule():
     # if DEBUG:
     #     print("[Logic] Get All Daily Schedule")
     return database.DB_Get_All_Daily_Schedule()
 
-# == [ADM] Show Content Daily Schedule == 
-def show_Daily_Schedule_Logic(access_code):
+# ====== [LOGIC] Show Daily Schedule ==== 
+def Logic_Show_Daily_Schedule(access_code):
     # if DEBUG:
     #     print("[Logic] Show Content Daily Schedule")
     return database.DB_Show_Daily_Schedule(access_code)
 
-# ====== [ADM] Delete Daily Schedule ==== 
-def delete_Daily_Schedule_Logic(access_code):
+# ====== [LOGIC] Delete Daily Schedule == 
+def Logic_Delete_Daily_Schedule(access_code):
     # if DEBUG:
     #     print("[Logic] Delete Daily Schedule")
     return database.DB_Remove_Daily_Schedule(access_code)
@@ -672,7 +672,7 @@ def delete_Daily_Schedule_Logic(access_code):
 # <<<<<<<<<< START TEMPLATE >>>>>>>>>>>>>
 
 # ====== [LOGIC] Assign Template ========    
-def assign_Template_Logic(template:str,args: list[str]) -> str:
+def Logic_Assign_Template(template:str,args: list[str]) -> str:
     # if DEBUG:
     #     print("[Logic] Assign Template")
     var_count = template.count("<var>")   
@@ -688,35 +688,35 @@ def assign_Template_Logic(template:str,args: list[str]) -> str:
     return result
 
 # ====== [LOGIC] Save Template ========== 
-def set_Template_Logic(content: str):
+def Logic_Set_Template(content: str):
     # if DEBUG:
     #     print("[Logic] Admin: Set Template")
     
     max_attempts = 1000  
 
     for _ in range(max_attempts):
-        access_code = create_Access_Code(6)
+        access_code = Create_Access_Code(6)
         
         if not database.DB_Cek_Template(access_code):  
             break
 
-    return database.DB_Save_Template(access_code,content,get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S"))
+    return database.DB_Save_Template(access_code,content,Logic_Get_Time().strftime("%Y-%m-%d %H:%M:%S"))
     
 # ====== [LOGIC] Get Template =========== 
-def get_Template_Logic(access_code):
+def Logic_Get_Template(access_code):
     # if DEBUG:
     #     print("[Logic] Bot: Get Template")
 
     return database.DB_Get_Template(access_code)    
 
 # ====== [LOGIC] Get All Template ======= 
-def get_All_Template_Logic():
+def Logic_Get_All_Template():
     # if DEBUG:
     #     print("[Logic] Get All Template")
     return database.DB_Get_All_Template()
 
 # ====== [LOGIC] Delete Template ======== 
-def delete_Template_Logic(access_code):
+def Logic_Delete_Template(access_code):
     # if DEBUG:
     #     print("[Logic] Delete Template")
     return database.DB_Remove_Template(access_code)
@@ -727,20 +727,20 @@ def delete_Template_Logic(access_code):
 
 # <<<<<<<<<< START VIP CODE >>>>>>>>>>>>>
 # ====== [LOGIC] Create VIP Access Code ====
-def create_VIP_Code_Logic() -> str:
+def Logic_Create_VIP_Code() -> str:
     # if DEBUG:
     #     print("[Logic] Admin: Create VIP Code")
     
     max_attempts = 1000
     
     for _ in range(max_attempts):
-        random_text = create_Access_Code(11)  
+        random_text = Create_Access_Code(11)  
         access_code = f"NV1Px{random_text}"  
         
         if not database.DB_Check_VIP_Code(access_code):
             break
     
-    now = get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S")
+    now = Logic_Get_Time().strftime("%Y-%m-%d %H:%M:%S")
     database.DB_Save_VIP_Code(access_code, now)
     
     link = f"https://t.me/gempalokal_bot?start={access_code}"
@@ -751,7 +751,7 @@ def create_VIP_Code_Logic() -> str:
     }
 
 # ====== [LOGIC] Activate VIP for User =====
-def activate_VIP_Logic(access_code: str, user_id: str, now):
+def Logic_Activate_VIP(access_code: str, user_id: str, now):
     if Settings.is_logging():
         logging.info(f"[Logic] Activate VIP for user: {user_id}")
     
@@ -776,7 +776,7 @@ def activate_VIP_Logic(access_code: str, user_id: str, now):
     database.DB_Update_User_VIP(user_id, True, now)
     
     # Get user info for notification
-    user_data = get_User_Logic(user_id)
+    user_data = Logic_Get_User(user_id)
     
     if Settings.is_logging():
         logging.info(f"[Logic] VIP activated for: {user_data.first_name}(@{user_data.username}) ({user_id})")
@@ -786,45 +786,21 @@ def activate_VIP_Logic(access_code: str, user_id: str, now):
         "message": f"🎉 <b>Selamat {user_data.first_name} Kamu VIP!\nKamu mendapatkan command baru</b>",
     }
   
-# ====== [LOGIC] Get All VIP ===============        
-def get_All_VIP_Contents_Logic():
-    # if DEBUG:
-    #     print("[Logic] Get VIP Welcome Package")
-    
-    contents = database.DB_Get_All_VIP_Variable()
-
-    if not contents:
-        return []
-    
-    return contents
-
-# ====== [LOGIC] Get Latest VIP  ===========      
-def get_Latest_VIP_Contents_Logic():
-    # if DEBUG:
-    #     print("[Logic] Get VIP Welcome Package")
-    
-    contents = database.DB_Get_Latest_VIP_Variable()
-    
-    if not contents:
-        return []
-    
-    return contents
-
 # ====== [LOGIC] Save VIP Variable =========
-def set_VIP_Variable_Logic(content: str, file_id: str) -> str:
+def Logic_Set_VIP_Variable(content: str, file_id: str) -> str:
     # if DEBUG:
     #     print("[Logic] Admin: Set VIP Variable")
     
     max_attempts = 1000
     
     for _ in range(max_attempts):
-        random_text = create_Access_Code(11)  
+        random_text = Create_Access_Code(11)  
         access_code = f"VV1Px{random_text}"  
         
         if not database.DB_Check_VIP_Variable(access_code):
             break
     
-    now = get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S")
+    now = Logic_Get_Time().strftime("%Y-%m-%d %H:%M:%S")
     link = f"https://t.me/gempalokal_bot?start={access_code}"
     
     database.DB_Save_VIP_Variable(access_code, content, file_id, now)
@@ -832,7 +808,7 @@ def set_VIP_Variable_Logic(content: str, file_id: str) -> str:
     return link
 
 # ====== [LOGIC] Get VIP Content ===========
-def get_VIP_Content_Logic(access_code: str):
+def Logic_Get_VIP_Variable(access_code: str):
     # if DEBUG:
     #     print("[Logic] Get VIP Content")
     
@@ -849,6 +825,30 @@ def get_VIP_Content_Logic(access_code: str):
         "content": content_data.get("content"),
         "file_id": content_data.get("file_id")
     }
+
+# ====== [LOGIC] Get All VIP ===============        
+def Logic_Get_All_VIP_Variable():
+    # if DEBUG:
+    #     print("[Logic] Get VIP Welcome Package")
+    
+    contents = database.DB_Get_All_VIP_Variable()
+
+    if not contents:
+        return []
+    
+    return contents
+
+# ====== [LOGIC] Get Latest VIP  ===========      
+def Logic_Get_Latest_VIP_Variable():
+    # if DEBUG:
+    #     print("[Logic] Get VIP Welcome Package")
+    
+    contents = database.DB_Get_Latest_VIP_Variable()
+    
+    if not contents:
+        return []
+    
+    return contents
 
 # <<<<<<<<<<< END VIP CODE >>>>>>>>>>>>>>
  

@@ -4,19 +4,19 @@ from telegram.error import TimedOut, BadRequest
 from services.update_user import update_User_Activity_Logic
 # from services.proccess_manager import ProccessManager
 from services.logic import (
-    setup_Backup_Logic,
-    send_Log_Logic,
-    send_Backup_To_Admin_Logic,
-    send_Backup_To_Channel_Logic,
-    cek_Subscribe_Logic,
-    set_commands_for_user,
-    get_Time_Logic,
-    get_Content_Logic,
-    get_User_Logic,
-    get_VIP_Content_Logic,
-    activate_VIP_Logic,
-    get_All_VIP_Contents_Logic,
-    get_Latest_VIP_Contents_Logic)
+    Logic_Setup_Backup,
+    Logic_Send_Log,
+    Logic_Send_Backup_To_Admin,
+    Logic_Send_Backup_To_Channel,
+    Logic_Set_Join_Button,
+    Logic_Set_Next_User_Commands,
+    Logic_Get_Time,
+    Logic_Get_Variable,
+    Logic_Get_User,
+    Logic_Get_VIP_Variable,
+    Logic_Activate_VIP,
+    Logic_Get_All_VIP_Variable,
+    Logic_Get_Latest_VIP_Variable)
 from config import (
     # DEBUG,
     ADMIN_IDS, 
@@ -62,7 +62,7 @@ async def start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # @proccess_handling
 async def user_Start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):    
     user_data = update_User_Activity_Logic(update.effective_user)
-    await set_commands_for_user(context, user_data)
+    await Logic_Set_Next_User_Commands(context, user_data)
     
     if not user_data.is_active:
         return
@@ -102,10 +102,10 @@ async def get_Reguler_Content_Handler(access_code: str, update: Update, context:
         user_data = update_User_Activity_Logic(update.effective_user)
         # if DEBUG:
         #     print(f"[Handlers] Reguler Content Access: {access_code}")
-        await cek_Subscribe_Logic(update, context, user_data.user_id)
+        await Logic_Set_Join_Button(update, context, user_data.user_id)
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
         
-        respon = get_Content_Logic(access_code)
+        respon = Logic_Get_Variable(access_code)
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if respon:
@@ -144,12 +144,12 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        await cek_Subscribe_Logic(update, context, user_data.user_id)
+        await Logic_Set_Join_Button(update, context, user_data.user_id)
         if Settings.is_logging():
             logging.info(f"[Handlers] VIP Activation: {access_code}")
         
         msg = await update.message.reply_text("<i>Checking...</i>", parse_mode="HTML")
-        user_data = get_User_Logic(user_data.user_id)
+        user_data = Logic_Get_User(user_data.user_id)
         if user_data.is_vip:
             dt = datetime.datetime.strptime(user_data.vip_created, "%Y-%m-%d %H:%M:%S")
             new_date = dt.strftime("%H:%M:%S %d-%m-%Y")
@@ -158,8 +158,8 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
             await update.message.reply_text(f"ℹ️ <i>Akun Sudah VIP\nTime: {new_date}\nPendaftaran Dibatalkan.</i>", parse_mode="HTML")
             return
         
-        vip_created = get_Time_Logic().strftime("%Y-%m-%d %H:%M:%S")
-        result = activate_VIP_Logic(access_code, user_data.user_id, vip_created)
+        vip_created = Logic_Get_Time().strftime("%Y-%m-%d %H:%M:%S")
+        result = Logic_Activate_VIP(access_code, user_data.user_id, vip_created)
         
         if not result["success"]:
             if msg and getattr(msg, "message_id", None):
@@ -186,16 +186,16 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
             except Exception as e:
                 if Settings.is_logging():
                     logging.warning(f"[Handler] Failed to notify admin {admin_id}: {e}")
-        user_data = get_User_Logic(user_data.user_id)
+        user_data = Logic_Get_User(user_data.user_id)
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         await send_VIP_All_Package_Handler(update, context)
         await update.message.reply_text("✅ <i><b>Anda Sekarang VIP!\nGunakan Menu Baru</b></i>", parse_mode="HTML")
-        await set_commands_for_user(context, user_data)
-        file, info = setup_Backup_Logic()
-        await send_Backup_To_Admin_Logic(context, file, info)
-        await send_Log_Logic(context)
-        await send_Backup_To_Channel_Logic(context, file, info)
+        await Logic_Set_Next_User_Commands(context, user_data)
+        file, info = Logic_Setup_Backup()
+        await Logic_Send_Backup_To_Admin(context, file, info)
+        await Logic_Send_Log(context)
+        await Logic_Send_Backup_To_Channel(context, file, info)
         
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
@@ -225,7 +225,7 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
         # if DEBUG:
         #     print(f"[Handlers] VIP Content Access: {access_code}")
         user_data = update_User_Activity_Logic(update.effective_user)
-        await cek_Subscribe_Logic(update, context, user_data.user_id)
+        await Logic_Set_Join_Button(update, context, user_data.user_id)
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         if not user_data.is_vip:
@@ -235,7 +235,7 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
             await update.message.reply_text(reply, parse_mode="HTML")
             return
         
-        result = get_VIP_Content_Logic(access_code)
+        result = Logic_Get_VIP_Variable(access_code)
         
         if not result["success"]:
             if msg and getattr(msg, "message_id", None):
@@ -288,7 +288,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
         # if DEBUG:
         #     print(f"[Handlers] Sending All VIP Contents")
         
-        await cek_Subscribe_Logic(update, context, user_data.user_id)
+        await Logic_Set_Join_Button(update, context, user_data.user_id)
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
                 
         if not user_data.is_vip:
@@ -298,7 +298,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
             await update.message.reply_text(reply, parse_mode="HTML")
             return
 
-        package = get_All_VIP_Contents_Logic()
+        package = Logic_Get_All_VIP_Variable()
 
         if not package:
             await msg.delete()
@@ -348,7 +348,7 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
         user_data = update_User_Activity_Logic(update.effective_user)
         # if DEBUG:
         #     print(f"[Handlers] Get Latest VIP Content")
-        await cek_Subscribe_Logic(update, context, user_data.user_id)
+        await Logic_Set_Join_Button(update, context, user_data.user_id)
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         if not user_data.is_vip:
@@ -358,7 +358,7 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
             await update.message.reply_text(reply, parse_mode="HTML")
             return
         
-        result = get_Latest_VIP_Contents_Logic()
+        result = Logic_Get_Latest_VIP_Variable()
         
         if not result:
             if msg and getattr(msg, "message_id", None):
@@ -406,7 +406,7 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        # await cek_Subscribe_Logic(update, context, user_data.user_id)
+        # await Logic_Set_Join_Button(update, context, user_data.user_id)
         start = time.time()
         
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
@@ -484,7 +484,7 @@ async def tutorial_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        await cek_Subscribe_Logic(update, context, user_data.user_id)
+        await Logic_Set_Join_Button(update, context, user_data.user_id)
         
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         

@@ -1,21 +1,22 @@
-import pytz
+import pytz, bot_instance
 import time as waktu
 from datetime import time
 from telegram.ext import Application,CommandHandler,MessageHandler, filters
 from services.settings import Settings
 from services.database import init_db
 from services.logic import (
-    init_settings, 
-    error_handler,
-    on_Startup, 
-    # restore_From_Channel_Pin_Logic,
-    generate_Tip_Logic,
-    # get_Daily_Schedule_Logic,
-    setup_Backup_Logic,
-    send_Backup_To_Admin_Logic,
-    send_Backup_To_Channel_Logic,
-    send_Log_Logic,
-    backup_to_channel_job)
+    # Tambahkan fitur ketika add data maka akan mengirim ke admin postingan yang ditambahkan tersebut, seperti vip post maupun regular post
+    Logic_init_settings, 
+    Logic_error_handler,
+    Logic_On_Startup, 
+    # Logic_Restore_From_Channel,
+    Logic_Generate_Tips,
+    # Logic_Get_Daily_Schedule,
+    Logic_Setup_Backup,
+    Logic_Send_Backup_To_Admin,
+    Logic_Send_Backup_To_Channel,
+    Logic_Send_Log,
+    Logic_Backup_To_Channel_Job)
 from handlers.user import (
     user_Start_Handler,
     ping_Handler,
@@ -66,13 +67,13 @@ import logging
 #     flask_app.run(host='0.0.0.0', port=8080)
 
 async def generate_tip_job(context=None) -> str:
-    tips = generate_Tip_Logic()
+    tips = Logic_Generate_Tips()
     Settings.set("tips", tips)
     if Settings.is_logging():
         logging.info(f"[BOT] TIP updated: {tips}")
         
 async def daily_Task(context):
-    # content = get_Daily_Schedule_Logic()
+    # content = Logic_Get_Daily_Schedule()
     # if content:
     #     if Settings.is_logging():
     #         logging.info("[Bot] Sending Daily Schedule")
@@ -82,18 +83,18 @@ async def daily_Task(context):
     #     if Settings.is_logging():
     #         logging.info("[Bot] Empty Daily Schedule!!!")
     
-    file, info = setup_Backup_Logic()  
+    file, info = Logic_Setup_Backup()  
     
-    await send_Backup_To_Admin_Logic(context, file, info)
+    await Logic_Send_Backup_To_Admin(context, file, info)
     waktu.sleep(0.2)
-    await send_Log_Logic(context)
+    await Logic_Send_Log(context)
     waktu.sleep(0.2)
-    await send_Backup_To_Channel_Logic(context, file, info)
+    await Logic_Send_Backup_To_Channel(context, file, info)
     
 def main():
     AppLogger.setup()
     init_db()
-    init_settings()
+    Logic_init_settings()
     
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -110,7 +111,7 @@ def main():
     # init restore backup
 
     if Settings.get("tips") == "Tidak Ada Tips":
-        # Settings.set("tips",generate_Tip_Logic())
+        # Settings.set("tips",Logic_Generate_Tips())
         pass
         
     if Settings.is_logging():
@@ -119,7 +120,8 @@ def main():
         
     # build application
     app = Application.builder().token(BOT_TOKEN).concurrent_updates(True).build()
-    app.post_init = on_Startup
+    bot_instance.bot = app.bot
+    app.post_init = Logic_On_Startup
 
     # register handlers
     # USER
@@ -155,10 +157,10 @@ def main():
     app.add_handler(CommandHandler("settemplate",set_Template_Handler))
     app.add_handler(CommandHandler("showtemplate",template_Handler))
     app.add_handler(CommandHandler("deletetemplate",delete_Template_Handler))
-    app.add_error_handler(error_handler)
+    app.add_error_handler(Logic_error_handler)
 
     app.job_queue.run_repeating(generate_tip_job, interval=216000)
-    app.job_queue.run_repeating(backup_to_channel_job, interval=3600)
+    app.job_queue.run_repeating(Logic_Backup_To_Channel_Job, interval=3600)
     
     tz = pytz.timezone(TIMEZONE)
     scheduled_time = time(hour=0, minute=1, tzinfo=tz)  

@@ -1,11 +1,48 @@
-import sys
-import json
+import sys, asyncio, time
+import json, bot_instance
 from services import database
 from services import logic
+from config import ADMIN_IDS
 
 task = sys.argv[1] if len(sys.argv) > 1 else None
 key = sys.argv[2] if len(sys.argv) > 2 else None
 
+async def Send_Message_Admin(message, file_id):
+    if not file_id or file_id == "None":
+        await bot_instance.bot.send_message(
+            chat_id=ADMIN_IDS,
+            text=message,
+            parse_mode="HTML"
+        )
+        return
+    
+    file = await bot_instance.bot.get_file(file_id)
+
+    file_path = file.file_path.lower()
+
+    if file_path.endswith((".jpg", ".jpeg", ".png", ".webp")):
+        await bot_instance.bot.send_photo(
+            chat_id=ADMIN_IDS,
+            photo=file_id,
+            caption=message,
+            parse_mode="HTML"
+        )
+
+    elif file_path.endswith((".zip", ".rar", ".7z", ".txt", ".pdf")):
+        await bot_instance.bot.send_document(
+            chat_id=ADMIN_IDS,
+            document=file_id,
+            caption=message,
+            parse_mode="HTML"
+        )
+
+    else:
+        await bot_instance.bot.send_message(
+            chat_id=ADMIN_IDS,
+            text=message,
+            parse_mode="HTML"
+        )
+    
 def response(status, message, data=None):
     result = {
         "status": status,
@@ -94,11 +131,16 @@ match task:
             data = json.loads(sys.stdin.read())
         
             if key == "variables":
-                result = logic.set_Variable_Logic(data["content"], "AgACAgUAAxkBAAIJy2mAQ6YD5c-ROy_-XEc2x_08trF8AAIoDmsbc3UBVP_H7wRWov5EAQADAgADeQADOAQ")
+                result = logic.Logic_Set_Variable(data["content"], data["file_id"])
             elif key == "vip_variables":
-                result = logic.set_VIP_Variable_Logic(data["content"], None)
-                
+                result = logic.Logic_Set_VIP_Variable(data["content"], data["file_id"])
+            
             conn.commit()
+            
+            asyncio.run(Send_Message_Admin(data["content"], data["file_id"]))
+            time.sleep(5)
+            asyncio.run(Send_Message_Admin(result, None))
+            
             response(
                 "success",
                 result

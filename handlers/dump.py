@@ -36,7 +36,7 @@
 #         }
 #     )
     
-#     # set_Daily_Schedule_Logic(content,waktu)
+#     # Logic_Set_Daily_Schedule(content,waktu)
 #     await msg.delete()
 #     await update.message.reply_text(f"Task scheduled at {dt.strftime('%Y-%m-%d %H:%M')}")
 #     await update.message.reply_text(content)

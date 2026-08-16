@@ -11,29 +11,29 @@ from config import (
     TIMEZONE, 
     SETTINGS_SCHEMA)
 from services.logic import (
-    setup_Backup_Logic,
-    send_Log_Logic,
-    send_Backup_To_Admin_Logic,
-    send_Backup_To_Channel_Logic,
-    format_Help_Logic,
-    create_VIP_Code_Logic,
-    set_VIP_Variable_Logic,
-    get_User_Logic,
-    user_Statistic_Logic,
-    get_All_User_Logic,
-    restore_Backup_Logic,
-    get_Time_Logic,
-    assign_Template_Logic,
-    do_Broadcast_Logic,
-    set_Variable_Logic,
-    set_Daily_Schedule_Logic,
-    get_All_Daily_Schedule_Logic,
-    show_Daily_Schedule_Logic,
-    delete_Daily_Schedule_Logic,
-    set_Template_Logic,
-    get_All_Template_Logic,
-    get_Template_Logic,
-    delete_Template_Logic)
+    Logic_Setup_Backup,
+    Logic_Send_Log,
+    Logic_Send_Backup_To_Admin,
+    Logic_Send_Backup_To_Channel,
+    Logic_Format_Help,
+    Logic_Create_VIP_Code,
+    Logic_Set_VIP_Variable,
+    Logic_Get_User,
+    Logic_User_Statistic,
+    Logic_Get_All_User,
+    Logic_Restore_Backup,
+    Logic_Get_Time,
+    Logic_Assign_Template,
+    Logic_Broadcast,
+    Logic_Set_Variable,
+    Logic_Set_Daily_Schedule,
+    Logic_Get_All_Daily_Schedule,
+    Logic_Show_Daily_Schedule,
+    Logic_Delete_Daily_Schedule,
+    Logic_Set_Template,
+    Logic_Get_All_Template,
+    Logic_Get_Template,
+    Logic_Delete_Template)
         
 # ====== Cek Admin ======================== 
 def is_admin(user_id: int) -> bool:
@@ -50,8 +50,8 @@ async def user_Statistic_Handler(update: Update, context: ContextTypes.DEFAULT_T
             return
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
 
-        users = get_All_User_Logic()
-        result = user_Statistic_Logic(users)
+        users = Logic_Get_All_User()
+        result = Logic_User_Statistic(users)
 
         await msg.delete()
         await update.message.reply_text(result, parse_mode="HTML")
@@ -91,7 +91,7 @@ async def log_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
-        await send_Log_Logic(context)
+        await Logic_Send_Log(context)
 
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
@@ -129,10 +129,10 @@ async def backup_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
-        file, info = setup_Backup_Logic()
-        await send_Backup_To_Admin_Logic(context, file, info)
-        await send_Log_Logic(context)
-        await send_Backup_To_Channel_Logic(context, file, info)
+        file, info = Logic_Setup_Backup()
+        await Logic_Send_Backup_To_Admin(context, file, info)
+        await Logic_Send_Log(context)
+        await Logic_Send_Backup_To_Channel(context, file, info)
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
@@ -177,7 +177,7 @@ async def restore_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         file = await doc.get_file()
         await file.download_to_drive(BACKUP_PATH)
 
-        response = restore_Backup_Logic()
+        response = Logic_Restore_Backup()
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         await update.message.reply_text(response or "✅ Restore selesai",parse_mode="HTML")
@@ -226,7 +226,7 @@ async def do_Broadcast_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         text = update.message.text or update.message.caption or ""
         parts = text.split(maxsplit=1)
         content = parts[1]
-        users_data = do_Broadcast_Logic()
+        users_data = Logic_Broadcast()
 
         tasks = [
             context.bot.send_message(chat_id=u["user_id"], text=content)
@@ -281,7 +281,7 @@ async def set_Variable_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 
         content = parts[1]
-        link_access = set_Variable_Logic(content, file_id)
+        link_access = Logic_Set_Variable(content, file_id)
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         await update.message.reply_text("✅ <i>New Variable Saved...</i>", parse_mode="HTML")
@@ -342,7 +342,7 @@ async def set_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFAU
 
 
         content = parts[1]
-        access_code = set_Daily_Schedule_Logic(content, file_id)
+        access_code = Logic_Set_Daily_Schedule(content, file_id)
         
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
@@ -402,7 +402,7 @@ async def show_All_Daily_Schedule_Handler(update: Update, context: ContextTypes.
         # if DEBUG:
         #     print("[Handlers] Admin: Show All Daily Schedule")
 
-        row = get_All_Daily_Schedule_Logic()
+        row = Logic_Get_All_Daily_Schedule()
         if row:
             lines = [f"{i}. <code>{code}</code>" for i, code in enumerate(row, start=1)]
             respon = "All Schedule Daily\n\n" + "\n".join(lines)
@@ -440,7 +440,7 @@ async def show_Daily_Schedule_Handler(update: Update, context: ContextTypes.DEFA
         # if DEBUG:
         #     print("[Handlers] Admin: Show Content Daily Schedule")
 
-        respon = show_Daily_Schedule_Logic(access_code)
+        respon = Logic_Show_Daily_Schedule(access_code)
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
             
@@ -501,7 +501,7 @@ async def delete_Daily_Schedule_Handler(update: Update, context: ContextTypes.DE
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 
         access_code = context.args[0]
-        response = delete_Daily_Schedule_Logic(access_code)
+        response = Logic_Delete_Daily_Schedule(access_code)
 
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
@@ -557,14 +557,14 @@ async def get_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         access_code = context.args[0]
         values = context.args[1:]
 
-        template = get_Template_Logic(access_code)
+        template = Logic_Get_Template(access_code)
         if not template:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             await update.message.reply_text(f"❌ <i>Not Found <b>{access_code}</b>...</i>",parse_mode="HTML")
             return
 
-        result = assign_Template_Logic(template, values)
+        result = Logic_Assign_Template(template, values)
         if msg and getattr(msg, "message_id", None):
                 await msg.delete()
         await update.message.reply_text(result, parse_mode="HTML")
@@ -614,7 +614,7 @@ async def set_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TYP
         parts = text.split(maxsplit=1)
         content = parts[1]
 
-        access_code = set_Template_Logic(content)
+        access_code = Logic_Set_Template(content)
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         await update.message.reply_text(f"<i>✅ Template Saved...</i>\n└── <code>{access_code}</code>",parse_mode="HTML")
@@ -691,7 +691,7 @@ async def show_All_Template_Handler(update: Update, context: ContextTypes.DEFAUL
         # if DEBUG:
         #     print("[Handlers] Admin: Show All Template")
 
-        row = get_All_Template_Logic()
+        row = Logic_Get_All_Template()
         if row:
             lines = [f"{i}. <code>{code}</code>" for i, code in enumerate(row, start=1)]
             respon = "All Template\n\n" + "\n".join(lines)
@@ -730,7 +730,7 @@ async def show_Template_Handler(update: Update, context: ContextTypes.DEFAULT_TY
         # if DEBUG:
         #     print("[Handlers] Admin: Show Content Template")
 
-        respon = get_Template_Logic(access_code)
+        respon = Logic_Get_Template(access_code)
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if respon:
@@ -784,7 +784,7 @@ async def delete_Template_Handler(update: Update, context: ContextTypes.DEFAULT_
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 
         access_code = context.args[0]
-        response = delete_Template_Logic(access_code)
+        response = Logic_Delete_Template(access_code)
        
         if response:
             if msg and getattr(msg, "message_id", None):
@@ -837,7 +837,7 @@ async def create_VIP_Code_Handler(update: Update, context: ContextTypes.DEFAULT_
         #     print("[Handlers] Admin: Create VIP Code")
             
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
-        result = create_VIP_Code_Logic()
+        result = Logic_Create_VIP_Code()
         
         message = (
             "✅ <b>Kode VIP Berhasil Dibuat!</b>\n\n"
@@ -896,7 +896,7 @@ async def set_VIP_Variable_Handler(update: Update, context: ContextTypes.DEFAULT
 
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
 
-        link_access = set_VIP_Variable_Logic(content, file_id)
+        link_access = Logic_Set_VIP_Variable(content, file_id)
         
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
@@ -936,7 +936,7 @@ async def list_VIP_Users_Handler(update: Update, context: ContextTypes.DEFAULT_T
         # if DEBUG:
         #     print("[Handlers] Admin: List VIP Users")
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
-        users = get_All_User_Logic()
+        users = Logic_Get_All_User()
         
         vip_users = [u for u in users if u.get("is_vip", False)]
         
@@ -950,7 +950,7 @@ async def list_VIP_Users_Handler(update: Update, context: ContextTypes.DEFAULT_T
             await msg.delete()
         message = f"👑 <b>VIP Users ({len(vip_users)}):</b>\n\n"
         for idx, u in enumerate(vip_users, 1):
-            user_info = get_User_Logic(u["user_id"])
+            user_info = Logic_Get_User(u["user_id"])
             username = user_info.username
             first_name = user_info.first_name
             dt = datetime.strptime(u["vip_created"], "%Y-%m-%d %H:%M:%S")
@@ -1009,7 +1009,7 @@ async def list_VIP_Users_Handler(update: Update, context: ContextTypes.DEFAULT_T
 
 async def scheduled_job(context: ContextTypes.DEFAULT_TYPE):
     try:
-        user_data = get_All_User_Logic()
+        user_data = Logic_Get_All_User()
         message = context.job.data.get("message")
         file_id = context.job.data.get("file_id")
 
@@ -1017,7 +1017,7 @@ async def scheduled_job(context: ContextTypes.DEFAULT_TYPE):
             for admin_id in ADMIN_IDS:
                 await context.bot.send_message(
                     chat_id=admin_id,
-                    text=f"❌ <i>Schedule Tidak Ada Pesan</i>\nTime: {get_Time_Logic().strftime('%H:%M:%S %d-%m-%Y')}",
+                    text=f"❌ <i>Schedule Tidak Ada Pesan</i>\nTime: {Logic_Get_Time().strftime('%H:%M:%S %d-%m-%Y')}",
                     parse_mode="HTML"
                 )
             return
@@ -1159,7 +1159,7 @@ async def settings_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         # if not context.arg:
         #     if msg and getattr(msg, "message_id", None):
         #         await msg.delete()
-        #     await update.message.reply_text("Format:\n\n" + await format_Help_Logic())
+        #     await update.message.reply_text("Format:\n\n" + await Logic_Format_Help())
         #     return
         text = update.message.text or update.message.caption or ""
         parts = text.split(maxsplit=2)
@@ -1167,7 +1167,7 @@ async def settings_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if len(parts) <= 1:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text("Format:\n\n" + format_Help_Logic())
+            await update.message.reply_text("Format:\n\n" + Logic_Format_Help())
             return
         
         key = parts[1]
@@ -1188,7 +1188,7 @@ async def settings_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if not is_valid:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text("Format:\n\n" + format_Help_Logic())
+            await update.message.reply_text("Format:\n\n" + Logic_Format_Help())
             return
 
         value_type = SETTINGS_SCHEMA[key]
