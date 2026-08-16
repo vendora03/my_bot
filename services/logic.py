@@ -33,11 +33,12 @@ async def Logic_Cek_Request(context):
             return
 
         if not file_id or file_id == "None" or file_id == "null":
-            await context.bot.send_message(
-                chat_id=ADMIN_IDS,
-                text=data["message"],
-                parse_mode="HTML"
-            )
+            for admin_id in ADMIN_IDS:
+                await context.bot.send_message(
+                    chat_id=admin_id,
+                    text=data["message"],
+                    parse_mode="HTML"
+                )
             return
         
         file = await context.bot.get_file(file_id)
@@ -45,27 +46,30 @@ async def Logic_Cek_Request(context):
         file_path = file.file_path.lower()
     
         if file_path.endswith((".jpg", ".jpeg", ".png", ".webp")):
-            await context.bot.send_photo(
-                chat_id=ADMIN_IDS,
-                photo=file_id,
-                caption=data["message"],
-                parse_mode="HTML"
-            )
+            for admin_id in ADMIN_IDS:
+                await context.bot.send_photo(
+                    chat_id=admin_id,
+                    photo=file_id,
+                    caption=data["message"],
+                    parse_mode="HTML"
+                )
     
         elif file_path.endswith((".zip", ".rar", ".7z", ".txt", ".pdf")):
-            await context.bot.send_document(
-                chat_id=ADMIN_IDS,
-                document=file_id,
-                caption=data["message"],
-                parse_mode="HTML"
-            )
+            for admin_id in ADMIN_IDS:
+                await context.bot.send_document(
+                    chat_id=admin_id,
+                    document=file_id,
+                    caption=data["message"],
+                    parse_mode="HTML"
+                )
     
         else:
-            await context.bot.send_message(
-                chat_id=ADMIN_IDS,
-                text=data["message"],
-                parse_mode="HTML"
-            )
+            for admin_id in ADMIN_IDS:
+                await context.bot.send_message(
+                    chat_id=admin_id,
+                    text=data["message"],
+                    parse_mode="HTML"
+                )
 
         with open(MESSAGE_FILE, "w", encoding="utf-8") as file:
             json.dump({}, file)
