@@ -98,23 +98,28 @@ def Logic_Format_Help():
     return "\n".join(lines)
 
 # <<<<<<<<<< START GENERAL >>>>>>>>>>>>>>
+socket_server = None
+
 async def Logic_On_Startup(app):
+    global socket_server
+
     for id_chat in ADMIN_IDS:
         await app.bot.send_message(
             chat_id=id_chat,
             text=f"🚀 Bot Start Up\nTime: {Logic_Get_Time().strftime('%H:%M:%S %d-%m-%Y')}",
             parse_mode="HTML"
         )
+
     await Logic_Restore_From_Channel(app)
     await Logic_Set_Base_User_Commands(app)
-    
-    asyncio.create_task(
-        asyncio.start_server(
-            lambda reader, writer: bot_listener(app, reader, writer),
-            "127.0.0.1",
-            8765
-        )
+
+    socket_server = await asyncio.start_server(
+        lambda reader, writer: bot_listener(app, reader, writer),
+        "127.0.0.1",
+        8765
     )
+
+    print("[SOCKET] Listener aktif di 127.0.0.1:8765")
 
 async def Logic_Set_Base_User_Commands(app):
     commands = [
