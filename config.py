@@ -7,6 +7,7 @@ load_dotenv()
 # ==== SETTINGS 
 SETTINGS_SCHEMA = {
     "maintenance": "bool",
+    "maintenance_start": "int",
     "debug": "bool",
     "tutorial_info": "text",
     "start_info_state": "bool",
@@ -67,6 +68,7 @@ TIPS = os.getenv("TIPS","Tidak Ada Tips")
 # ==== SET SETTINGS ====
 DEFAULT_SETTINGS = {
     "maintenance": IS_MAINTENANCE,
+    "maintenance_start": "",
     "debug": IS_LOG,
     "tutorial_info": TUTORIAL_INFO,
     "start_info_state": START_INFO_STATE,

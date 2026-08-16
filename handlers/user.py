@@ -1,5 +1,5 @@
 from telegram import Update
-from telegram.ext import ContextTypes
+from telegram.ext import ContextTypes, ApplicationHandlerStop
 from telegram.error import TimedOut, BadRequest
 from services.update_user import update_User_Activity_Logic
 # from services.proccess_manager import ProccessManager
@@ -43,6 +43,20 @@ import datetime, pytz, time, logging, asyncio
     
 #     # return wrapper  
 
+async def maintenance_Handler(update, context):
+    if not Settings.get("maintenance") == "true":
+        return
+
+    if update.effective_user and update.effective_user.id in ADMIN_IDS:
+        return
+
+    if update.effective_message:
+        await update.effective_message.reply_text(
+            "🔧 Bot sedang dalam maintenance.\n"
+            "⏱ Time: 00:03:12"
+        )
+
+    raise ApplicationHandlerStop
 
 async def start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:

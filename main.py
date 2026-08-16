@@ -1,7 +1,8 @@
 import pytz, bot_instance
 import time as waktu
 from datetime import time
-from telegram.ext import Application,CommandHandler,MessageHandler, filters
+from telegram import Update
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, TypeHandler
 from services.settings import Settings
 from services.database import init_db
 from services.logic import (
@@ -22,7 +23,8 @@ from handlers.user import (
     ping_Handler,
     tutorial_Handler,
     send_VIP_All_Package_Handler,
-    get_Latest_VIP_Content_Handler)
+    get_Latest_VIP_Content_Handler,
+    maintenance_Handler)
 from config import (
     # DEBUG, 
     BOT_TOKEN, 
@@ -48,7 +50,8 @@ from handlers.admin import (
     get_Template_Handler,
     set_Template_Handler,
     template_Handler,
-    delete_Template_Handler)
+    delete_Template_Handler,
+    set_Maintenance_Handler)
 
 # from flask import Flask
 # from threading import Thread
@@ -123,6 +126,9 @@ def main():
     bot_instance.bot = app.bot
     app.post_init = Logic_On_Startup
 
+    # Maintenance Handler
+    app.add_handler(TypeHandler(Update, maintenance_Handler), group=-1)
+        
     # register handlers
     # USER
     app.add_handler(CommandHandler("start", user_Start_Handler, block=False))
@@ -144,6 +150,7 @@ def main():
     app.add_handler(MessageHandler(filters.CaptionRegex(r"^/setvariable") | filters.Regex(r"^/setvariable"),set_Variable_Handler))
     
     app.add_handler(CommandHandler("settings", settings_Handler))
+    app.add_handler(CommandHandler("maintenance", set_Maintenance_Handler))
     
     app.add_handler(CommandHandler("createvipcode", create_VIP_Code_Handler))
     app.add_handler(CommandHandler("setvipvariable", set_VIP_Variable_Handler))

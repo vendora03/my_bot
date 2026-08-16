@@ -4,6 +4,7 @@ from telegram import Update
 from telegram.ext import ContextTypes
 from telegram.error import TimedOut, BadRequest
 from services.settings import Settings
+from services.maintenance import maintenance
 from config import (
     # DEBUG,
     ADMIN_IDS, 
@@ -1219,4 +1220,12 @@ async def settings_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 await msg.delete()
             except BadRequest:
                 pass
+
+async def set_Maintenance_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    is_maintenance = Settings.get("maintenance")
+    if is_maintenance == "false":     
+        maintenance(True)
+    else:
+        maintenance(False)
+        
 # <<<<<<<<<<<< END Settings >>>>>>>>>>>>>>>

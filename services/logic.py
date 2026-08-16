@@ -88,18 +88,20 @@ def User_Commands(user: database.User) -> list[BotCommand]:
 
     ADMIN_COMMANDS = [
         ("userstat", "Cek User Statistic"),
+        ("setvariable", "Set Variable"),
+        ("broadcast", "Buat Broadcast"),
+        
         ("settings", "Pengaturan Bot"),
+        ("maintenance", "Maintenance Bot")
         ("log", "Get Log Data"),
         ("backup", "Backup Database"),
         ("restore", "Restore Database"),
-        ("broadcast", "Buat Broadcast"),
-        ("schedule", "Buat Schedule"),
-        ("setvariable", "Set Variable"),
         
         ("createvipcode", "Buat Kode VIP Baru"),
         ("setvipvariable", "Simpan Konten VIP"),
         ("listvip", "List Semua VIP User"),
         
+        ("schedule", "Buat Schedule"),
         ("setdailyschedule", "Simpan Daily Schedule"),
         ("showdailyschedule", "Tampilkan Daily Schedule"),
         ("deletedailyschedule", "Hapus Daily Schedule"),
