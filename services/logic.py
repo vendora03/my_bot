@@ -1,4 +1,4 @@
-import random, string, pytz, json, os, logging, asyncio
+import random, string, pytz, json, os, logging
 from datetime import datetime, timedelta
 from io import BytesIO
 from services.settings import Settings
@@ -14,60 +14,64 @@ from config import (
     TIMEZONE, 
     PROMPT, 
     SETTINGS_SCHEMA,
-    DEFAULT_SETTINGS)
+    DEFAULT_SETTINGS,
+    BASE_DIR)
 
-async def bot_listener(app, reader, writer):
+async def Logic_Cek_Request(context):
+    MESSAGE_FILE = os.path.join(BASE_DIR, "request_message.json")
+    if not os.path.exists(MESSAGE_FILE):
+        return
+
     try:
-        data = await reader.read(4096)
-        data = json.loads(data.decode("utf-8"))
+        with open(MESSAGE_FILE, "r", encoding="utf-8") as file:
+            data = json.load(file)
 
+        message = data.get("message")
+        file_id = data.get("file_id")
+
+        if not message:
+            return
+
+        if not file_id or file_id == "None":
+            await context.bot.send_message(
+                chat_id=ADMIN_IDS,
+                text=data["message"],
+                parse_mode="HTML"
+            )
+            return
         
-        if data["action"] == "send_message":
-            file_id = data.get("file_id")
-            if not file_id or file_id == "None":
-                await app.bot.send_message(
-                    chat_id=ADMIN_IDS,
-                    text=data["message"],
-                    parse_mode="HTML"
-                )
-            else:            
-                file = await app.bot.get_file(file_id)
-            
-                file_path = file.file_path.lower()
-            
-                if file_path.endswith((".jpg", ".jpeg", ".png", ".webp")):
-                    await app.bot.send_photo(
-                        chat_id=ADMIN_IDS,
-                        photo=file_id,
-                        caption=data["message"],
-                        parse_mode="HTML"
-                    )
-            
-                elif file_path.endswith((".zip", ".rar", ".7z", ".txt", ".pdf")):
-                    await app.bot.send_document(
-                        chat_id=ADMIN_IDS,
-                        document=file_id,
-                        caption=data["message"],
-                        parse_mode="HTML"
-                    )
-            
-                else:
-                    await app.bot.send_message(
-                        chat_id=ADMIN_IDS,
-                        text=data["message"],
-                        parse_mode="HTML"
-                    )
+        file = await context.bot.get_file(file_id)
+    
+        file_path = file.file_path.lower()
+    
+        if file_path.endswith((".jpg", ".jpeg", ".png", ".webp")):
+            await context.bot.send_photo(
+                chat_id=ADMIN_IDS,
+                photo=file_id,
+                caption=data["message"],
+                parse_mode="HTML"
+            )
+    
+        elif file_path.endswith((".zip", ".rar", ".7z", ".txt", ".pdf")):
+            await context.bot.send_document(
+                chat_id=ADMIN_IDS,
+                document=file_id,
+                caption=data["message"],
+                parse_mode="HTML"
+            )
+    
+        else:
+            await context.bot.send_message(
+                chat_id=ADMIN_IDS,
+                text=data["message"],
+                parse_mode="HTML"
+            )
 
-        writer.write(b"OK")
-        await writer.drain()
+        with open(MESSAGE_FILE, "w", encoding="utf-8") as file:
+            json.dump({}, file)
 
     except Exception as e:
-        writer.write(str(e).encode("utf-8"))
-        await writer.drain()
-
-    finally:
-        writer.close()
-        await writer.wait_closed()
+        logging.error(f"[MESSAGE REQUEST] {e}")
         
 def Logic_init_settings():
     for key, value in DEFAULT_SETTINGS.items():
@@ -98,28 +102,16 @@ def Logic_Format_Help():
     return "\n".join(lines)
 
 # <<<<<<<<<< START GENERAL >>>>>>>>>>>>>>
-socket_server = None
-
 async def Logic_On_Startup(app):
-    global socket_server
-
     for id_chat in ADMIN_IDS:
         await app.bot.send_message(
             chat_id=id_chat,
             text=f"🚀 Bot Start Up\nTime: {Logic_Get_Time().strftime('%H:%M:%S %d-%m-%Y')}",
             parse_mode="HTML"
         )
-
     await Logic_Restore_From_Channel(app)
     await Logic_Set_Base_User_Commands(app)
-
-    socket_server = await asyncio.start_server(
-        lambda reader, writer: bot_listener(app, reader, writer),
-        "127.0.0.1",
-        8765
-    )
-
-    print("[SOCKET] Listener aktif di 127.0.0.1:8765")
+  
 
 async def Logic_Set_Base_User_Commands(app):
     commands = [
@@ -385,6 +377,11 @@ async def Logic_Backup_To_Channel_Job(context):
     file, info = Logic_Setup_Backup()
     await Logic_Send_Backup_To_Channel(context, file, info)
 
+def Send_Message_Admin(message, file_id):
+    MESSAGE_FILE = os.path.join(BASE_DIR, "request_message.json")
+    data = {"message": message, "file_id": file_id}
+    with open(MESSAGE_FILE, "w", encoding="utf-8") as file:
+        json.dump(data, file, ensure_ascii=False, indent=4)
 # <<<<<<<<<< END ADMIN >>>>>>>>>>>>>>
 
 

@@ -1,24 +1,11 @@
-import sys, asyncio, time, json, socket
+import sys, time, json
 from services import database
 from services import logic
-from config import ADMIN_IDS
 
 task = sys.argv[1] if len(sys.argv) > 1 else None
 key = sys.argv[2] if len(sys.argv) > 2 else None
 
-def Send_Message_Admin(message, file_id):
-    data = json.dumps({
-        "action": "send_message",
-        "message": message,
-        "file_id": file_id
-    }).encode("utf-8")
-
-    with socket.create_connection(("127.0.0.1", 8765)) as sock:
-        sock.sendall(data)
-        response = sock.recv(1024)
-
-    return response.decode("utf-8")
-    
+        
 def response(status, message, data=None):
     result = {
         "status": status,
@@ -113,9 +100,9 @@ match task:
             
             conn.commit()
             
-            Send_Message_Admin(data["content"], data["file_id"])
+            logic.Send_Message_Admin(data["content"], data["file_id"])
             time.sleep(5)
-            Send_Message_Admin(result, None)
+            logic.Send_Message_Admin(result, None)
             
             response(
                 "success",
