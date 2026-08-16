@@ -214,10 +214,10 @@ def DB_Save_Variable(content, access_code, file_id, now):
     cursor.execute("""
             INSERT INTO variables (access_code, content, file_id, created_at) 
             VALUES (?, ?, ?, ?)
-            ON CONFLICT(key) DO UPDATE SET
+            ON CONFLICT(access_code) DO UPDATE SET
                 content = excluded.content,
                 file_id = excluded.file_id,
-                updated_at = excluded.created_at
+                created_at = excluded.created_at
         """, (access_code, content, file_id, now))
 
     conn.commit()
@@ -234,7 +234,14 @@ def DB_Save_All_Variable(data, connect = None):
     else:
         conn = connect
     cursor = conn.cursor()
-    cursor.executemany("""INSERT INTO variables (access_code, content, file_id, created_at)VALUES (?, ?, ?, ?)""", data)
+    cursor.executemany("""
+            INSERT INTO variables (access_code, content, file_id, created_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(access_code) DO UPDATE SET
+                content = excluded.content,
+                file_id = excluded.file_id,
+                created_at = excluded.created_at
+        """, data)
 
     if not connect:
         conn.commit()
@@ -739,7 +746,7 @@ def DB_Save_VIP_Variable(access_code, content, file_id, now):
     cursor.execute("""
         INSERT INTO vip_variables (access_code, content, file_id, created_at) 
         VALUES (?, ?, ?, ?)
-        ON CONFLICT(key) DO UPDATE SET
+        ON CONFLICT(access_code) DO UPDATE SET
             content = excluded.content,
             file_id = excluded.file_id,
             created_at = excluded.created_at
@@ -757,7 +764,14 @@ def DB_Save_All_VIP_Variable(data, connect = None):
     else:
         conn = connect
     cursor = conn.cursor()
-    cursor.executemany("""INSERT INTO vip_variables (access_code, content, file_id, created_at)VALUES (?, ?, ?, ?)""", data)
+    cursor.executemany("""
+            INSERT INTO vip_variables (access_code, content, file_id, created_at)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(access_code) DO UPDATE SET
+                content = excluded.content,
+                file_id = excluded.file_id,
+                created_at = excluded.created_at
+        """, data)
     if not connect:
         conn.commit()
         conn.close()
