@@ -65,7 +65,7 @@ TIPS = os.getenv("TIPS","Tidak Ada Tips")
 
 # ==== SET SETTINGS ====
 DEFAULT_SETTINGS = {
-    "maintenance": IS_LOG,
+    "maintenance": IS_MAINTENANCE,
     "debug": IS_LOG,
     "tutorial_info": TUTORIAL_INFO,
     "start_info_state": START_INFO_STATE,
