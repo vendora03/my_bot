@@ -6,6 +6,7 @@ load_dotenv()
 
 # ==== SETTINGS 
 SETTINGS_SCHEMA = {
+    "maintenance": "bool",
     "debug": "bool",
     "tutorial_info": "text",
     "start_info_state": "bool",
