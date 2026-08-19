@@ -8,7 +8,7 @@ from services.logic import (
     Logic_Send_Log,
     Logic_Send_Backup_To_Admin,
     Logic_Send_Backup_To_Channel,
-    Logic_Set_Join_Button,
+    Logic_Start_Info,
     Logic_Set_Next_User_Commands,
     Logic_Get_Time,
     Logic_Get_Variable,
@@ -16,7 +16,8 @@ from services.logic import (
     Logic_Get_VIP_Variable,
     Logic_Activate_VIP,
     Logic_Get_All_VIP_Variable,
-    Logic_Get_Latest_VIP_Variable)
+    Logic_Get_Latest_VIP_Variable,
+    Logic_Is_User_Joined)
 from config import (
     # DEBUG,
     ADMIN_IDS, 
@@ -116,7 +117,10 @@ async def get_Reguler_Content_Handler(access_code: str, update: Update, context:
         user_data = update_User_Activity_Logic(update.effective_user)
         # if DEBUG:
         #     print(f"[Handlers] Reguler Content Access: {access_code}")
-        await Logic_Set_Join_Button(update, context, user_data.user_id)
+        is_join = await Logic_Start_Info(update, context, user_data.user_id)
+        if not is_join:
+            return
+        
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
         
         respon = Logic_Get_Variable(access_code)
@@ -158,7 +162,11 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        await Logic_Set_Join_Button(update, context, user_data.user_id)
+        
+        is_join = await Logic_Start_Info(update, context, user_data.user_id)
+        if not is_join:
+            return
+        
         if Settings.is_logging():
             logging.info(f"[Handlers] VIP Activation: {access_code}")
         
@@ -239,7 +247,10 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
         # if DEBUG:
         #     print(f"[Handlers] VIP Content Access: {access_code}")
         user_data = update_User_Activity_Logic(update.effective_user)
-        await Logic_Set_Join_Button(update, context, user_data.user_id)
+        is_join = await Logic_Start_Info(update, context, user_data.user_id)
+        if not is_join:
+            return
+        
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         if not user_data.is_vip:
@@ -302,7 +313,7 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
         # if DEBUG:
         #     print(f"[Handlers] Sending All VIP Contents")
         
-        await Logic_Set_Join_Button(update, context, user_data.user_id)
+        await Logic_Start_Info(update, context, user_data.user_id)
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
                 
         if not user_data.is_vip:
@@ -362,7 +373,7 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
         user_data = update_User_Activity_Logic(update.effective_user)
         # if DEBUG:
         #     print(f"[Handlers] Get Latest VIP Content")
-        await Logic_Set_Join_Button(update, context, user_data.user_id)
+        await Logic_Start_Info(update, context, user_data.user_id)
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         if not user_data.is_vip:
@@ -420,7 +431,7 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        # await Logic_Set_Join_Button(update, context, user_data.user_id)
+        # await Logic_Start_Info(update, context, user_data.user_id)
         start = time.time()
         
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
@@ -498,7 +509,7 @@ async def tutorial_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        await Logic_Set_Join_Button(update, context, user_data.user_id)
+        await Logic_Start_Info(update, context, user_data.user_id)
         
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         

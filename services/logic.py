@@ -236,7 +236,7 @@ async def Is_User_Joined(app, user_id: int, chat_id: str) -> bool:
     except BadRequest:
         return False
     
-async def Logic_Set_Join_Button(update, context, user_id) -> bool:
+async def Logic_Start_Info(update, context, user_id) -> bool:
     if not Settings.start_info_enabled():
         return True
 

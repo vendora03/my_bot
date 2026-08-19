@@ -1,6 +1,7 @@
 from datetime import datetime
 from services import database 
 from config import SETTINGS_SCHEMA
+
 class Settings:
     _cache = {}
     
