@@ -11,8 +11,7 @@ from config import (
     BACKUP_PATH, 
     TIMEZONE, 
     SETTINGS_SCHEMA,
-    BOOLEAN_KEYS,
-    TEXT_KEYS)
+    )
 from services.logic import (
     Logic_Setup_Backup,
     Logic_Send_Log,
