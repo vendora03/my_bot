@@ -10,7 +10,9 @@ from config import (
     ADMIN_IDS, 
     BACKUP_PATH, 
     TIMEZONE, 
-    SETTINGS_SCHEMA)
+    SETTINGS_SCHEMA,
+    BOOLEAN_KEYS,
+    TEXT_KEYS)
 from services.logic import (
     Logic_Setup_Backup,
     Logic_Send_Log,
@@ -1165,40 +1167,94 @@ async def settings_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         text = update.message.text or update.message.caption or ""
         parts = text.split(maxsplit=2)
         
+        # =========================================================
+        # 1. /settings
+        # =========================================================
         if len(parts) <= 1:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             await update.message.reply_text("Format:\n\n" + Logic_Format_Help())
             return
-        
-        key = parts[1]
-        raw_value = parts[2]
 
-        is_valid = (
-            len(parts) >= 2
-            and key in SETTINGS_SCHEMA
-            and (
-                (SETTINGS_SCHEMA[key] == "bool"
-                and raw_value.lower() in ("true", "false"))
-                or
-                (SETTINGS_SCHEMA[key] == "text"
-                and raw_value.strip())
-            )
-        )
+        key = parts[1]
         
-        if not is_valid:
+        # =========================================================
+        # 2. Key tidak dikenal
+        # =========================================================
+        if key not in SETTINGS_SCHEMA:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             await update.message.reply_text("Format:\n\n" + Logic_Format_Help())
             return
 
-        value_type = SETTINGS_SCHEMA[key]
-        
-        value = raw_value.lower() if value_type == "bool" else raw_value
-        Settings.set(key, value)
-        if msg and getattr(msg, "message_id", None):
-            await msg.delete()
-        await update.message.reply_text(f"✅ <i>Setting <b>`{key}`</b> Saved...</i>",parse_mode="HTML")
+        setting_type = SETTINGS_SCHEMA[key]
+        # =========================================================
+        # 3. Jika hanya /settings <key>
+        # =========================================================
+        if len(parts) == 2:
+            current_value = Settings.get(key)
+
+            if setting_type == "bool":
+                edit_format = (
+                    f"/settings {key} true\n"
+                    f"/settings {key} false"
+                )
+
+            elif key == "group":
+                edit_format = (
+                    f"/settings {key} <teks>\n"
+                    f"Contoh:\n"
+                    f"/settings group -1373818197$;-18384849386"
+                )
+
+            else:
+                edit_format = f"/settings {key} <teks>"
+                
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
+            await update.message.reply_text(
+                f"{current_value}\n\n"
+                f"Edit:\n"
+                f"{edit_format}"
+            )
+            return
+
+        # =========================================================
+        # 4. Boolean
+        # =========================================================
+        if setting_type == "bool":
+            value = parts[2].lower()
+
+            if value not in ["true", "false"]:
+                await update.message.reply_text(
+                    f"/settings {key} true/false"
+                )
+                return
+
+            Settings.set(key, value)
+
+            if msg and getattr(msg, "message_id", None):
+                await msg.delete()
+            await update.message.reply_text(
+                f"✅ <i>Setting <b>`{key}`</b> Changed -> {value}</i>", parse_mode="HTML"
+            )
+            return
+
+        # =========================================================
+        # 5. Text / group
+        # =========================================================
+        elif setting_type == "text":
+            value = parts[2]
+
+            Settings.set(key, value)
+            await update.message.reply_text(
+                value, parse_mode="HTML"
+            )
+            await update.message.reply_text(
+                f"✅ <i>Setting <b>`{key}`</b> Changed</i>", parse_mode="HTML"
+            )
+            return
+            
           
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
