@@ -101,7 +101,7 @@ async def Handler_User_Start(update: Update, context: ContextTypes.DEFAULT_TYPE)
     if not user_data.is_active:
         return
     
-    text = update.amessage.text
+    text = update.message.text
     access_code = text.replace("/start","").strip()
     
     if not access_code:
