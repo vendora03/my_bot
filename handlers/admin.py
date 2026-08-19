@@ -1203,7 +1203,7 @@ async def settings_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 edit_format = (
                     f"/settings {key} <teks>\n"
                     f"Contoh:\n"
-                    f"/settings group -1373818197$ nama_grup -18384849386 nama_grup"
+                    f"/settings group -1373818197$ link_join -18384849386 link_join"
                 )
 
             else:

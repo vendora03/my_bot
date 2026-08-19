@@ -133,7 +133,7 @@ async def get_Reguler_Content_Handler(access_code: str, update: Update, context:
             else:
                 await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
         else:
-            await update.message.reply_text(f"❌ <i><b>Not Found...</b></i>",parse_mode="HTML")
+            await update.message.reply_text(f"❌ <i>Not Found...</i>",parse_mode="HTML")
             
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
