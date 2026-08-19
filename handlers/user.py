@@ -16,8 +16,7 @@ from services.logic import (
     Logic_Get_VIP_Variable,
     Logic_Activate_VIP,
     Logic_Get_All_VIP_Variable,
-    Logic_Get_Latest_VIP_Variable,
-    Logic_Is_User_Joined)
+    Logic_Get_Latest_VIP_Variable)
 from config import (
     # DEBUG,
     ADMIN_IDS, 
