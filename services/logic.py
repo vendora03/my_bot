@@ -229,13 +229,15 @@ def Join_Button():
     
     return InlineKeyboardMarkup(buttons)
 
-async def Is_User_Joined(app, user_id: int, chat_id: str) -> bool:
+async def Is_User_Joined(app, user_id: int, chat_id) -> bool:
     try:
         member = await app.bot.get_chat_member(chat_id, user_id)
+        if Settings.is_logging():
+            logging.info(f"[JOIN CHECK] get_chat_member OK: chat_id={chat_id} user_id={user_id} status={member.status}")
         return member.status in ("member", "administrator", "creator")
     except Exception as e:
         if Settings.is_logging():
-            logging.warning(f"[JOIN CHECK] chat_id={chat_id} user_id={user_id} -> {type(e).__name__}: {e}")
+            logging.warning(f"[JOIN CHECK] get_chat_member GAGAL: chat_id={chat_id} user_id={user_id} -> {type(e).__name__}: {e}")
         return False
     
 async def Logic_Start_Info(update, context, user_id) -> bool:
@@ -246,11 +248,24 @@ async def Logic_Start_Info(update, context, user_id) -> bool:
     if not raw_group:
         return True
 
-    groups = raw_group.split()          
-    id_groups = groups[0::2]          
+    groups = raw_group.split()
+    id_groups = groups[0::2]
+
+    if Settings.is_logging():
+        logging.info(f"[JOIN CHECK] user_id={user_id} | raw_group='{raw_group}' | id_groups={id_groups}")
 
     for id_group in id_groups:
-        if not await Is_User_Joined(context, user_id, id_group):
+        try:
+            is_joined = await Is_User_Joined(context, user_id, id_group)
+        except Exception as e:
+            if Settings.is_logging():
+                logging.warning(f"[JOIN CHECK] EXCEPTION saat cek id_group={id_group} user_id={user_id} -> {type(e).__name__}: {e}")
+            is_joined = False
+
+        if Settings.is_logging():
+            logging.info(f"[JOIN CHECK] id_group={id_group} user_id={user_id} -> joined={is_joined}")
+
+        if not is_joined:
             keyboard = Join_Button()
             start_info = Settings.get_start_info()
             if "@user" in start_info:
@@ -265,8 +280,8 @@ async def Logic_Start_Info(update, context, user_id) -> bool:
                     reply_markup=keyboard,
                     parse_mode="HTML"
                 )
-                
-            return False   
+
+            return False
 
     return True
   
