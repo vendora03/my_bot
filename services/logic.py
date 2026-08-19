@@ -21,6 +21,14 @@ def Logic_Decode_Start_Value(context, payload: str):
     if payload.startswith("@"):
         return context.bot_data.get("start_value_cache", {}).get(payload[1:])
     return payload
+
+def Logic_Get_Registered_Chat_Ids(raw_group: str = None) -> set[str]:
+    raw_group = raw_group if raw_group is not None else Settings.get_group()
+    if not raw_group:
+        return set()
+    parts = raw_group.split()
+    return set(parts[0::2])
+
 # <<<<<<<<<< LOGIC UTIL >>>>>>>>>>>>>>>>>
 
 async def Logic_Cek_Request(context):
@@ -215,17 +223,17 @@ def User_Commands(user: database.User) -> list[BotCommand]:
 def Logic_Join_Button(missing_groups: list[tuple[str, str]], callback_data: str):
     buttons = []
 
-    for i, (_, url) in enumerate(missing_groups, start=1):
-        buttons.append([
-            InlineKeyboardButton(
-                f"Join Group {i}" if len(missing_groups) > 1 else "Join",
-                url=url
-            )
-        ])
-
     buttons.append([
         InlineKeyboardButton("🔄 Refresh", callback_data=callback_data)
     ])
+    
+    for _, url in missing_groups:
+        buttons.append([
+            InlineKeyboardButton(
+                "‼️Join‼️",
+                url=url
+            )
+        ])
 
     return InlineKeyboardMarkup(buttons)
 

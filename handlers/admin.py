@@ -2,11 +2,33 @@ import config, pytz, asyncio, logging
 from datetime import datetime
 from telegram import Update
 from telegram.ext import ContextTypes
-from telegram.error import TimedOut, BadRequest
+from telegram.error import TimedOut, BadRequest, Forbidden
 from services import logic
 from services.settings import Settings
 from services.maintenance import maintenance
+
+from telegram.ext import ApplicationHandlerStop
+
+async def Handler_Chat_Whitelist(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat = update.effective_chat
+    if chat is None or chat.type == "private":
+        return
+
+    if str(chat.id) not in logic.Logic_Get_Registered_Chat_Ids():
+        if Settings.is_logging():
+            logging.info(f"[WHITELIST] Diabaikan: chat_id={chat.id} type={chat.type} "f"title={getattr(chat, 'title', None)}")
+        raise ApplicationHandlerStop
         
+async def Handler_Delete_Service_Message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    try:
+        await update.message.delete()
+    except (BadRequest, Forbidden) as e:
+        # BadRequest: pesan sudah kehapus / terlalu lama (>48 jam biasanya masih bisa, tapi ada edge case)
+        # Forbidden: bot bukan admin di grup itu, tidak punya izin hapus pesan
+        if Settings.is_logging():
+            logging.warning(f"[SERVICE MSG] Gagal hapus pesan join/left: {type(e).__name__}: {e}")
+
+
 # ====== Cek Admin ======================== 
 def is_admin(user_id: int) -> bool:
     return user_id in config.ADMIN_IDS

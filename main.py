@@ -83,9 +83,11 @@ def main():
     app = Application.builder().token(config.BOT_TOKEN).concurrent_updates(True).build()
     app.post_init = logic.Logic_On_Startup
 
-    # Maintenance Handler
+    # UTIL
+    app.add_handler(TypeHandler(Update, admin.Handler_Chat_Whitelist), group=-2)
     app.add_handler(TypeHandler(Update, user.Handler_Maintenance), group=-1)
     app.add_handler(CallbackQueryHandler(user.Handler_Join_Refresh_Callback, pattern=r"^refresh:"))
+    app.add_handler(MessageHandler(filters.StatusUpdate.NEW_CHAT_MEMBERS | filters.StatusUpdate.LEFT_CHAT_MEMBER, admin.Handler_Delete_Service_Message))
     
     # register handlers
     # USER

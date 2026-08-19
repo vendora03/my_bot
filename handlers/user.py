@@ -42,10 +42,10 @@ async def Handler_Join_Refresh_Callback(update: Update, context: ContextTypes.DE
             if "not modified" not in str(e).lower():
                 if Settings.is_logging():
                     logging.warning(f"[REFRESH] edit_message_reply_markup gagal: {e}")
-        await query.answer("❌ Masih ada grup yang belum kamu join.")
+        await query.answer("‼️ Join Grup ‼️")
         return
 
-    await query.answer("✅ Verifikasi berhasil!")
+    await query.answer("✅ Enjoyl!")
 
     try:
         await query.message.delete()
