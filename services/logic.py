@@ -233,7 +233,9 @@ async def Is_User_Joined(app, user_id: int, chat_id: str) -> bool:
     try:
         member = await app.bot.get_chat_member(chat_id, user_id)
         return member.status in ("member", "administrator", "creator")
-    except BadRequest:
+    except Exception as e:
+        if Settings.is_logging():
+            logging.warning(f"[JOIN CHECK] chat_id={chat_id} user_id={user_id} -> {type(e).__name__}: {e}")
         return False
     
 async def Logic_Start_Info(update, context, user_id) -> bool:
@@ -248,7 +250,7 @@ async def Logic_Start_Info(update, context, user_id) -> bool:
     id_groups = groups[0::2]          
 
     for id_group in id_groups:
-        if not await Is_User_Joined(context, user_id, int(id_group)):
+        if not await Is_User_Joined(context, user_id, id_group):
             keyboard = Join_Button()
             start_info = Settings.get_start_info()
             if "@user" in start_info:
