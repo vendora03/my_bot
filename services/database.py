@@ -1,12 +1,9 @@
-import sqlite3, logging
-from config import (
-    # DEBUG,
-    DB_PATH)
+import sqlite3, logging, config
 from models.user_model import User
 
 # ====== [DB] Connection Handler ======== 
 def DB_Get_Connection():
-    return sqlite3.connect(DB_PATH)
+    return sqlite3.connect(config.DB_PATH)
 
 # ====== [DB] Creating Table Data ======= 
 def init_db():

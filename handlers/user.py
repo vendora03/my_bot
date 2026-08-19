@@ -1,29 +1,13 @@
+import config, datetime, pytz, time, logging, asyncio
+
+from services import logic
+from services.settings import Settings
+from services.update_user import update_User_Activity_Logic
+
 from telegram import Update
 from telegram.ext import ContextTypes, ApplicationHandlerStop
-from telegram.error import TimedOut, BadRequest
-from services.update_user import update_User_Activity_Logic
+from telegram.error import TimedOut, BadRequest, Forbidden
 # from services.proccess_manager import ProccessManager
-from services.logic import (
-    Logic_Setup_Backup,
-    Logic_Send_Log,
-    Logic_Send_Backup_To_Admin,
-    Logic_Send_Backup_To_Channel,
-    Logic_Start_Info,
-    Logic_Set_Next_User_Commands,
-    Logic_Get_Time,
-    Logic_Get_Variable,
-    Logic_Get_User,
-    Logic_Get_VIP_Variable,
-    Logic_Activate_VIP,
-    Logic_Get_All_VIP_Variable,
-    Logic_Get_Latest_VIP_Variable)
-from config import (
-    # DEBUG,
-    ADMIN_IDS, 
-    START_TIME, 
-    TIMEZONE)
-from services.settings import Settings
-import datetime, pytz, time, logging, asyncio
 # from functools import wraps
 
 # def proccess_handling(func):
@@ -43,11 +27,47 @@ import datetime, pytz, time, logging, asyncio
     
 #     # return wrapper  
 
-async def maintenance_Handler(update, context):
+async def Handler_Join_Refresh_Callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    action = query.data.split(":", 1)[1] if ":" in query.data else ""
+
+    user_id = query.from_user.id
+    missing = await logic.Logic_Get_Missing_Groups(context, user_id)
+
+    if missing:
+        new_keyboard = logic.Logic_Join_Button(missing, query.data)
+        try:
+            await query.edit_message_reply_markup(reply_markup=new_keyboard)
+        except BadRequest as e:
+            if "not modified" not in str(e).lower():
+                if Settings.is_logging():
+                    logging.warning(f"[REFRESH] edit_message_reply_markup gagal: {e}")
+        await query.answer("❌ Masih ada grup yang belum kamu join.")
+        return
+
+    await query.answer("✅ Verifikasi berhasil!")
+
+    try:
+        await query.message.delete()
+    except (BadRequest, Forbidden) as e:
+        if Settings.is_logging():
+            logging.warning(f"[REFRESH] Gagal hapus pesan requirement: {e}")
+
+    # dispatch berdasarkan action
+    if action == "getall":
+        await Handler_Send_VIP_All_Package(update, context)
+    elif action == "getnew":
+        await Handler_Get_Latest_VIP_Content(update, context)
+    elif action == "tutorial":
+        await Handler_Tutorial(update, context)
+    elif action:
+        await Handler_Content(action, update, context)
+    
+async def Handler_Maintenance(update, context):
     if not Settings.get("maintenance") == "true":
         return
 
-    if update.effective_user and update.effective_user.id in ADMIN_IDS:
+    if update.effective_user and update.effective_user.id in config.ADMIN_IDS:
         return
 
     if update.effective_message:
@@ -58,96 +78,96 @@ async def maintenance_Handler(update, context):
 
     raise ApplicationHandlerStop
 
-async def start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def Handler_Start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
-        # if DEBUG:
+        # if config.DEBUG:
         #     print("[Handlers] User: Start")
-        await update.message.reply_text("❌ Tidak Ada Gempa Terbaru.")
+        await update.effective_message.reply_text("❌ Tidak Ada Gempa Terbaru.")
     except TimedOut:
         if Settings.is_logging():
             logging.warning("[TIMEOUT] Koneksi Timeout...")
-        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if Settings.is_logging():
             logging.warning(f"[ERROR] Something Wrong... -> {e}")
-        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
 # @proccess_handling
-async def user_Start_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):    
+async def Handler_User_Start(update: Update, context: ContextTypes.DEFAULT_TYPE):    
     user_data = update_User_Activity_Logic(update.effective_user)
-    await Logic_Set_Next_User_Commands(context, user_data)
+    await logic.Logic_Set_Next_User_Commands(context, user_data)
     
     if not user_data.is_active:
         return
     
-    text = update.message.text
+    text = update.amessage.text
     access_code = text.replace("/start","").strip()
     
     if not access_code:
-        await start_Handler(update, context)
+        await Handler_Start(update, context)
         return
     else:
-        # if DEBUG:
+        # if config.DEBUG:
         #     print(f"[Handlers] Kode: {access_code}")
-        await Content_Handler(access_code, update, context)
+        await Handler_Content(access_code, update, context)
         return
            
-async def Content_Handler(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE ):
-    # if DEBUG:
+async def Handler_Content(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE ):
+    # if config.DEBUG:
     #     print("[Handlers] User: Get Content")
     
     if access_code.startswith("NV1Px"):   
-        await activate_VIP_Handler(access_code, update, context)
+        await Handler_Activate_VIP(access_code, update, context)
         return
     elif access_code.startswith("VV1Px"):
-        await get_VIP_Content_Handler(access_code, update, context)
+        await Handler_Get_VIP_Content(access_code, update, context)
         return
     elif access_code.startswith("N0cTRaA"):
-        await get_Reguler_Content_Handler(access_code, update, context)
+        await Handler_Get_Reguler_Content(access_code, update, context)
         return
     else:
-        await update.message.reply_text("❌ Tidak Ada Gempa Terbaru.")
+        await update.effective_message.reply_text("❌ Tidak Ada Gempa Terbaru.")
            
 # ====== Handle Reguler Content Access =====
-async def get_Reguler_Content_Handler(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def Handler_Get_Reguler_Content(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        # if DEBUG:
+        # if config.DEBUG:
         #     print(f"[Handlers] Reguler Content Access: {access_code}")
-        is_join = await Logic_Start_Info(update, context, user_data.user_id)
+        is_join = await logic.Logic_Start_Info(update, context, user_data.user_id, access_code)
         if not is_join:
             return
         
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
+        msg = await update.effective_message.reply_text("<i>Tunggu Sebentar...</i>",parse_mode="HTML")
         
-        respon = Logic_Get_Variable(access_code)
+        respon = logic.Logic_Get_Variable(access_code)
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if respon:
             file_id = respon.get("file_id")
             content = respon.get("content")
             if file_id:
-                await update.message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
+                await update.effective_message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
             else:
-                await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
+                await update.effective_message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
         else:
-            await update.message.reply_text(f"❌ <i>Not Found...</i>",parse_mode="HTML")
+            await update.effective_message.reply_text(f"❌ <i>Not Found...</i>",parse_mode="HTML")
             
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning("[TIMEOUT] Koneksi Timeout...")
-        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning(f"[ERROR] Something Wrong... -> {e}")
-        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -157,35 +177,35 @@ async def get_Reguler_Content_Handler(access_code: str, update: Update, context:
                 pass
 
 # ====== Handle VIP Activation =============
-async def activate_VIP_Handler(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def Handler_Activate_VIP(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
         
-        is_join = await Logic_Start_Info(update, context, user_data.user_id)
+        is_join = await logic.Logic_Start_Info(update, context, user_data.user_id, access_code)
         if not is_join:
             return
         
         if Settings.is_logging():
             logging.info(f"[Handlers] VIP Activation: {access_code}")
         
-        msg = await update.message.reply_text("<i>Checking...</i>", parse_mode="HTML")
-        user_data = Logic_Get_User(user_data.user_id)
+        msg = await update.effective_message.reply_text("<i>Checking...</i>", parse_mode="HTML")
+        user_data = logic.Logic_Get_User(user_data.user_id)
         if user_data.is_vip:
             dt = datetime.datetime.strptime(user_data.vip_created, "%Y-%m-%d %H:%M:%S")
             new_date = dt.strftime("%H:%M:%S %d-%m-%Y")
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text(f"ℹ️ <i>Akun Sudah VIP\nTime: {new_date}\nPendaftaran Dibatalkan.</i>", parse_mode="HTML")
+            await update.effective_message.reply_text(f"ℹ️ <i>Akun Sudah VIP\nTime: {new_date}\nPendaftaran Dibatalkan.</i>", parse_mode="HTML")
             return
         
-        vip_created = Logic_Get_Time().strftime("%Y-%m-%d %H:%M:%S")
-        result = Logic_Activate_VIP(access_code, user_data.user_id, vip_created)
+        vip_created = logic.Logic_Get_Time().strftime("%Y-%m-%d %H:%M:%S")
+        result = logic.Logic_Activate_VIP(access_code, user_data.user_id, vip_created)
         
         if not result["success"]:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text(result["message"], parse_mode="HTML")
+            await update.effective_message.reply_text(result["message"], parse_mode="HTML")
             return
             
         # Notify admin
@@ -197,7 +217,7 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
             f"🔑 Code: <code>{access_code}</code>"
         )
         
-        for admin_id in ADMIN_IDS:
+        for admin_id in config.ADMIN_IDS:
             try:
                 await context.bot.send_message(
                     chat_id=admin_id,
@@ -207,30 +227,30 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
             except Exception as e:
                 if Settings.is_logging():
                     logging.warning(f"[Handler] Failed to notify admin {admin_id}: {e}")
-        user_data = Logic_Get_User(user_data.user_id)
+        user_data = logic.Logic_Get_User(user_data.user_id)
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
-        await send_VIP_All_Package_Handler(update, context)
-        await update.message.reply_text("✅ <i><b>Anda Sekarang VIP!\nGunakan Menu Baru</b></i>", parse_mode="HTML")
-        await Logic_Set_Next_User_Commands(context, user_data)
-        file, info = Logic_Setup_Backup()
-        await Logic_Send_Backup_To_Admin(context, file, info)
-        await Logic_Send_Log(context)
-        await Logic_Send_Backup_To_Channel(context, file, info)
+        await Handler_Send_VIP_All_Package(update, context)
+        await update.effective_message.reply_text("✅ <i><b>Anda Sekarang VIP!\nGunakan Menu Baru</b></i>", parse_mode="HTML")
+        await logic.Logic_Set_Next_User_Commands(context, user_data)
+        file, info = logic.Logic_Setup_Backup()
+        await logic.Logic_Send_Backup_To_Admin(context, file, info)
+        await logic.Logic_Send_Log(context)
+        await logic.Logic_Send_Backup_To_Channel(context, file, info)
         
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning("[TIMEOUT] Koneksi Timeout...")
-        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning(f"[ERROR] Something Wrong... -> {e}")
-        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -240,31 +260,31 @@ async def activate_VIP_Handler(access_code: str, update: Update, context: Contex
                 pass
 
 # ====== Handle VIP Content Access =========
-async def get_VIP_Content_Handler(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def Handler_Get_VIP_Content(access_code: str, update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
-        # if DEBUG:
+        # if config.DEBUG:
         #     print(f"[Handlers] VIP Content Access: {access_code}")
         user_data = update_User_Activity_Logic(update.effective_user)
-        is_join = await Logic_Start_Info(update, context, user_data.user_id)
+        is_join = await logic.Logic_Start_Info(update, context, user_data.user_id, access_code)
         if not is_join:
             return
         
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
+        msg = await update.effective_message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         if not user_data.is_vip:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             reply =Settings.get_vip_info()
-            await update.message.reply_text(reply, parse_mode="HTML")
+            await update.effective_message.reply_text(reply, parse_mode="HTML")
             return
         
-        result = Logic_Get_VIP_Variable(access_code)
+        result = logic.Logic_Get_VIP_Variable(access_code)
         
         if not result["success"]:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text(result.get("message","❌ Tidak Dapat Akses VIP"), parse_mode="HTML")
+            await update.effective_message.reply_text(result.get("message","❌ Tidak Dapat Akses VIP"), parse_mode="HTML")
             return
         
         # Send VIP content
@@ -274,25 +294,25 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
         if file_id:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
+            await update.effective_message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
         else:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
+            await update.effective_message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
             
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning("[TIMEOUT] Koneksi Timeout...")
-        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning(f"[ERROR] Something Wrong... -> {e}")
-        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -305,28 +325,30 @@ async def get_VIP_Content_Handler(access_code: str, update: Update, context: Con
 
 # ====== Send VIP Welcome Package ==========
 # @proccess_handling
-async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def Handler_Send_VIP_All_Package(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        # if DEBUG:
+        # if config.DEBUG:
         #     print(f"[Handlers] Sending All VIP Contents")
         
-        await Logic_Start_Info(update, context, user_data.user_id)
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
+        is_join = await logic.Logic_Start_Info(update, context, user_data.user_id, "getall")
+        if not is_join:
+            return
+        msg = await update.effective_message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
                 
         if not user_data.is_vip:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             reply =Settings.get_vip_info()
-            await update.message.reply_text(reply, parse_mode="HTML")
+            await update.effective_message.reply_text(reply, parse_mode="HTML")
             return
 
-        package = Logic_Get_All_VIP_Variable()
+        package = logic.Logic_Get_All_VIP_Variable()
 
         if not package:
             await msg.delete()
-            await update.message.reply_text("⚠️ <i><b>Konten VIP Tidak Tersedia...</b></i>", parse_mode="HTML")
+            await update.effective_message.reply_text("⚠️ <i><b>Konten VIP Tidak Tersedia...</b></i>", parse_mode="HTML")
             return
         
         if msg and getattr(msg, "message_id", None):
@@ -338,9 +360,9 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
             content = item.get("content")
             
             if file_id:
-                await update.message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
+                await update.effective_message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
             else:
-                await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
+                await update.effective_message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
             await asyncio.sleep(1)
             
     except TimedOut:
@@ -348,14 +370,14 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
             await msg.delete()
         if Settings.is_logging():
             logging.warning("[TIMEOUT] Koneksi Timeout...")
-        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning(f"[ERROR] Something Wrong... -> {e}")
-        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
      
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -366,28 +388,30 @@ async def send_VIP_All_Package_Handler(update: Update, context: ContextTypes.DEF
 
 # ====== Get Latest VIP Content  ===========
 # @proccess_handling
-async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def Handler_Get_Latest_VIP_Content(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        # if DEBUG:
+        # if config.DEBUG:
         #     print(f"[Handlers] Get Latest VIP Content")
-        await Logic_Start_Info(update, context, user_data.user_id)
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
+        is_join = await logic.Logic_Start_Info(update, context, user_data.user_id, "getall")
+        if not is_join:
+            return
+        msg = await update.effective_message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
         if not user_data.is_vip:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
             reply =Settings.get_vip_info()
-            await update.message.reply_text(reply, parse_mode="HTML")
+            await update.effective_message.reply_text(reply, parse_mode="HTML")
             return
         
-        result = Logic_Get_Latest_VIP_Variable()
+        result = logic.Logic_Get_Latest_VIP_Variable()
         
         if not result:
             if msg and getattr(msg, "message_id", None):
                 await msg.delete()
-            await update.message.reply_text("⚠️ <i><b>Konten VIP Tidak Tersedia...</b></i>", parse_mode="HTML")
+            await update.effective_message.reply_text("⚠️ <i><b>Konten VIP Tidak Tersedia...</b></i>", parse_mode="HTML")
             return
         
         # Send VIP content
@@ -397,23 +421,23 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if file_id:
-            await update.message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
+            await update.effective_message.reply_photo(photo=file_id, caption=content, parse_mode="HTML")
         else:
-            await update.message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
+            await update.effective_message.reply_text(content, parse_mode="HTML", disable_web_page_preview=True)
             
     except TimedOut:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning("[TIMEOUT] Koneksi Timeout...")
-        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning(f"[ERROR] Something Wrong... -> {e}")
-        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
         if msg and getattr(msg, "message_id", None):
@@ -426,11 +450,11 @@ async def get_Latest_VIP_Content_Handler(update: Update, context: ContextTypes.D
 
 # ====== Handle PING =======================
 # @proccess_handling
-async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def Handler_Ping(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        # await Logic_Start_Info(update, context, user_data.user_id)
+        # await logic.Logic_Start_Info(update, context, user_data.user_id)
         start = time.time()
         
         msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
@@ -438,13 +462,13 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         end = time.time()
         ping_ms = int((end - start) * 1000)
         
-        # if DEBUG:
+        # if config.DEBUG:
         #     print("[Handlers] User: Ping")
         
-        tz = pytz.timezone(TIMEZONE)
+        tz = pytz.timezone(config.TIMEZONE)
         now = datetime.datetime.now(tz)
         
-        uptime = now - START_TIME
+        uptime = now - config.START_TIME
         total_seconds = int(uptime.total_seconds())
         
         days, remainder = divmod(total_seconds, 86400)
@@ -460,7 +484,7 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
             uptime_text = f"{seconds} sec"
 
         # format tanggal dan jam startup
-        startup_text = START_TIME.strftime("%H:%M:%S %d-%m-%Y")
+        startup_text = config.START_TIME.strftime("%H:%M:%S %d-%m-%Y")
         if not Settings.get('tips'):
             Settings.set('tips', "Tidak Ada Tips.")
             
@@ -471,7 +495,7 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         await update.message.reply_text(massage_uptime, parse_mode="HTML") 
-        # if DEBUG:
+        # if config.DEBUG:
         #     massage_debug = (
         #                     f"🚀 {'StartUP':10}: {startup_text}\n"
         #                     f"🕑 {'UpTime':10}: {uptime_text}\n"
@@ -504,22 +528,24 @@ async def ping_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 # ====== Handle TUTORIAL ===================    
 # @proccess_handling        
-async def tutorial_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def Handler_Tutorial(update: Update, context: ContextTypes.DEFAULT_TYPE):
     msg = None
     try:
         user_data = update_User_Activity_Logic(update.effective_user)
-        await Logic_Start_Info(update, context, user_data.user_id)
+        is_join = await logic.Logic_Start_Info(update, context, user_data.user_id, "tutorial")
+        if not is_join:
+            return
         
-        msg = await update.message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
+        msg = await update.effective_message.reply_text("<i>Tunggu Sebentar...</i>", parse_mode="HTML")
         
-        # if DEBUG:
+        # if config.DEBUG:
         #     print("[Handlers] User: Tutorial")
         
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         tutorial_info = Settings.get("tutorial_info")
         if tutorial_info:
-            await update.message.reply_text(tutorial_info, parse_mode="HTML", disable_web_page_preview=True) 
+            await update.effective_message.reply_text(tutorial_info, parse_mode="HTML", disable_web_page_preview=True) 
             return
         return 
             
@@ -530,14 +556,14 @@ async def tutorial_Handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if Settings.is_logging():
             logging.warning("[TIMEOUT] Koneksi Timeout...")
             
-        await update.message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("⚠️ <i>Koneksi Timeout, coba lagi...</i>", parse_mode="HTML")
 
     except Exception as e:
         if msg and getattr(msg, "message_id", None):
             await msg.delete()
         if Settings.is_logging():
             logging.warning(f"[ERROR] Something Wrong... -> {e}")
-        await update.message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
+        await update.effective_message.reply_text("❌ <i>Request Failed, coba lagi...</i>", parse_mode="HTML")
 
     finally:
         if msg and getattr(msg, "message_id", None):

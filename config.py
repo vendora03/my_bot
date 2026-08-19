@@ -1,5 +1,4 @@
-import os
-import datetime,pytz
+import os, datetime,pytz
 from dotenv import load_dotenv
 
 load_dotenv()

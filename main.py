@@ -1,63 +1,16 @@
-import pytz
+import config, logging, pytz
 import time as waktu
 from datetime import time
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, TypeHandler
-from services.settings import Settings
+from handlers import user, admin
+from services import logic
 from services.database import init_db
-from services.logic import (
-    # Tambahkan fitur ketika add data maka akan mengirim ke admin postingan yang ditambahkan tersebut, seperti vip post maupun regular post
-    Logic_init_settings, 
-    Logic_error_handler,
-    Logic_On_Startup, 
-    # Logic_Restore_From_Channel,
-    Logic_Generate_Tips,
-    # Logic_Get_Daily_Schedule,
-    Logic_Setup_Backup,
-    Logic_Send_Backup_To_Admin,
-    Logic_Send_Backup_To_Channel,
-    Logic_Send_Log,
-    Logic_Backup_To_Channel_Job,
-    Logic_Cek_Request)
-from handlers.user import (
-    user_Start_Handler,
-    ping_Handler,
-    tutorial_Handler,
-    send_VIP_All_Package_Handler,
-    get_Latest_VIP_Content_Handler,
-    maintenance_Handler)
-from config import (
-    # DEBUG, 
-    BOT_TOKEN, 
-    # TIPS, 
-    # ADMIN_IDS, 
-    TIMEZONE)
-from handlers.admin import (
-    log_Handler,
-    settings_Handler,
-    list_VIP_Users_Handler,
-    set_VIP_Variable_Handler,
-    create_VIP_Code_Handler,
-    # remove_All_VIP_Handler,
-    user_Statistic_Handler,
-    backup_Handler,
-    restore_Handler,
-    schedule_command,
-    do_Broadcast_Handler,
-    set_Variable_Handler,
-    set_Daily_Schedule_Handler,
-    daily_Schedule_Handler,
-    delete_Daily_Schedule_Handler,
-    get_Template_Handler,
-    set_Template_Handler,
-    template_Handler,
-    delete_Template_Handler,
-    set_Maintenance_Handler)
+from services.settings import Settings
+from services.logger import AppLogger
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, TypeHandler, CallbackQueryHandler
 
 # from flask import Flask
 # from threading import Thread
-from services.logger import AppLogger
-import logging
 
 
 # flask_app = Flask(__name__)
@@ -73,34 +26,34 @@ import logging
 
 
 async def generate_tip_job(context=None) -> str:
-    tips = Logic_Generate_Tips()
-    Settings.set("tips", tips)
+    tips = logic.Logic_Generate_Tips()
+    Settings.set("tips", config.TIPS)
     if Settings.is_logging():
-        logging.info(f"[BOT] TIP updated: {tips}")
+        logging.info(f"[BOT] TIP updated: {config.TIPS}")
         
 async def daily_Task(context):
-    # content = Logic_Get_Daily_Schedule()
+    # content = logic.Logic_Get_Daily_Schedule()
     # if content:
     #     if Settings.is_logging():
     #         logging.info("[Bot] Sending Daily Schedule")
-    #     for admin_id in ADMIN_IDS:
+    #     for admin_id in config.ADMIN_IDS:
     #         await context.bot.send_message(chat_id=admin_id, text=content)
     # else:
     #     if Settings.is_logging():
     #         logging.info("[Bot] Empty Daily Schedule!!!")
     
-    file, info = Logic_Setup_Backup()  
+    file, info = logic.Logic_Setup_Backup()  
     
-    await Logic_Send_Backup_To_Admin(context, file, info)
+    await logic.Logic_Send_Backup_To_Admin(context, file, info)
     waktu.sleep(0.2)
-    await Logic_Send_Log(context)
+    await logic.Logic_Send_Log(context)
     waktu.sleep(0.2)
-    await Logic_Send_Backup_To_Channel(context, file, info)
+    await logic.Logic_Send_Backup_To_Channel(context, file, info)
     
 def main():
     AppLogger.setup()
     init_db()
-    Logic_init_settings()
+    logic.Logic_init_settings()
     
     logging.getLogger("httpx").setLevel(logging.WARNING)
     logging.getLogger("httpcore").setLevel(logging.WARNING)
@@ -109,7 +62,7 @@ def main():
     logging.getLogger("telegram.ext._jobqueue").setLevel(logging.CRITICAL)
     logging.getLogger("apscheduler.executors.default").setLevel(logging.WARNING)
     
-    if not BOT_TOKEN:
+    if not config.BOT_TOKEN:
         raise RuntimeError("BOT_TOKEN belum diset")
 
     # print("[SYSTEM] Starting Flask Health Check...")
@@ -119,7 +72,7 @@ def main():
     # init restore backup
 
     if Settings.get("tips") == "Tidak Ada Tips":
-        # Settings.set("tips",Logic_Generate_Tips())
+        # Settings.set("tips",logic.Logic_Generate_Tips())
         pass
         
     if Settings.is_logging():
@@ -127,53 +80,54 @@ def main():
 
         
     # build application
-    app = Application.builder().token(BOT_TOKEN).concurrent_updates(True).build()
-    app.post_init = Logic_On_Startup
+    app = Application.builder().token(config.BOT_TOKEN).concurrent_updates(True).build()
+    app.post_init = logic.Logic_On_Startup
 
     # Maintenance Handler
-    app.add_handler(TypeHandler(Update, maintenance_Handler), group=-1)
-        
+    app.add_handler(TypeHandler(Update, user.Handler_Maintenance), group=-1)
+    app.add_handler(CallbackQueryHandler(user.Handler_Join_Refresh_Callback, pattern=r"^refresh:"))
+    
     # register handlers
     # USER
-    app.add_handler(CommandHandler("start", user_Start_Handler, block=False))
-    app.add_handler(CommandHandler("ping", ping_Handler, block=False))
-    app.add_handler(CommandHandler("tutorial", tutorial_Handler, block=False))
+    app.add_handler(CommandHandler("start", user.Handler_User_Start, block=False))
+    app.add_handler(CommandHandler("ping", user.Handler_Ping, block=False))
+    app.add_handler(CommandHandler("tutorial", user.Handler_Tutorial, block=False))
     
     # USER VIP
-    app.add_handler(CommandHandler("getall", send_VIP_All_Package_Handler, block=False))
-    app.add_handler(CommandHandler("getnew", get_Latest_VIP_Content_Handler, block=False))
+    app.add_handler(CommandHandler("getall", user.Handler_Send_VIP_All_Package, block=False))
+    app.add_handler(CommandHandler("getnew", user.Handler_Get_Latest_VIP_Content, block=False))
     
     # ADMIN
     # app.add_handler(CommandHandler("removeallvip", remove_All_VIP_Handler))
-    app.add_handler(CommandHandler("userstat", user_Statistic_Handler))
-    app.add_handler(CommandHandler("log", log_Handler))
-    app.add_handler(CommandHandler("backup", backup_Handler))
-    app.add_handler(MessageHandler(filters.Document.ALL & filters.CaptionRegex(r"^/restore"),restore_Handler))   
-    app.add_handler(CommandHandler("broadcast",do_Broadcast_Handler))
-    app.add_handler(MessageHandler(filters.CaptionRegex(r"^/schedule") | filters.Regex(r"^/schedule"),schedule_command))
-    app.add_handler(MessageHandler(filters.CaptionRegex(r"^/setvariable") | filters.Regex(r"^/setvariable"),set_Variable_Handler))
+    app.add_handler(CommandHandler("userstat", admin.Handler_User_Statistic))
+    app.add_handler(CommandHandler("log", admin.Handler_Log))
+    app.add_handler(CommandHandler("backup", admin.Handler_Backup))
+    app.add_handler(MessageHandler(filters.Document.ALL & filters.CaptionRegex(r"^/restore"),admin.Handler_Restore))   
+    app.add_handler(CommandHandler("broadcast",admin.Handler_Do_Broadcast))
+    app.add_handler(MessageHandler(filters.CaptionRegex(r"^/schedule") | filters.Regex(r"^/schedule"),admin.Handler_Schedule_Command))
+    app.add_handler(MessageHandler(filters.CaptionRegex(r"^/setvariable") | filters.Regex(r"^/setvariable"),admin.Handler_Set_Variable))
     
-    app.add_handler(CommandHandler("settings", settings_Handler))
-    app.add_handler(CommandHandler("maintenance", set_Maintenance_Handler))
+    app.add_handler(CommandHandler("settings", admin.Handler_Settings))
+    app.add_handler(CommandHandler("maintenance", admin.Handler_Set_Maintenance))
     
-    app.add_handler(CommandHandler("createvipcode", create_VIP_Code_Handler))
-    app.add_handler(CommandHandler("setvipvariable", set_VIP_Variable_Handler))
-    app.add_handler(CommandHandler("listvip", list_VIP_Users_Handler))
+    app.add_handler(CommandHandler("createvipcode", admin.Handler_Create_VIP_Code))
+    app.add_handler(CommandHandler("setvipvariable", admin.Handler_Set_VIP_Variable))
+    app.add_handler(CommandHandler("listvip", admin.Handler_List_VIP_Users))
     
-    app.add_handler(MessageHandler(filters.CaptionRegex(r"^/setdailyschedule") | filters.Regex(r"^/setdailyschedule"),set_Daily_Schedule_Handler))
-    app.add_handler(CommandHandler("showdailyschedule", daily_Schedule_Handler))
-    app.add_handler(CommandHandler("deletedailyschedule",delete_Daily_Schedule_Handler))
+    app.add_handler(MessageHandler(filters.CaptionRegex(r"^/setdailyschedule") | filters.Regex(r"^/setdailyschedule"),admin.Handler_Set_Daily_Schedule))
+    app.add_handler(CommandHandler("showdailyschedule", admin.Handler_Daily_Schedule))
+    app.add_handler(CommandHandler("deletedailyschedule",admin.Handler_Delete_Daily_Schedule))
     
-    app.add_handler(CommandHandler("gettemplate",get_Template_Handler))
-    app.add_handler(CommandHandler("settemplate",set_Template_Handler))
-    app.add_handler(CommandHandler("showtemplate",template_Handler))
-    app.add_handler(CommandHandler("deletetemplate",delete_Template_Handler))
-    app.add_error_handler(Logic_error_handler)
+    app.add_handler(CommandHandler("gettemplate",admin.Handler_Get_Template))
+    app.add_handler(CommandHandler("settemplate",admin.Handler_Set_Template))
+    app.add_handler(CommandHandler("showtemplate",admin.Handler_Template))
+    app.add_handler(CommandHandler("deletetemplate",admin.Handler_Delete_Template))
+    app.add_error_handler(logic.Logic_error_handler)
 
     app.job_queue.run_repeating(generate_tip_job, interval=216000)
-    app.job_queue.run_repeating(Logic_Backup_To_Channel_Job, interval=3600)
-    app.job_queue.run_repeating(Logic_Cek_Request, interval=2)
-    tz = pytz.timezone(TIMEZONE)
+    app.job_queue.run_repeating(logic.Logic_Backup_To_Channel_Job, interval=3600)
+    app.job_queue.run_repeating(logic.Logic_Cek_Request, interval=2)
+    tz = pytz.timezone(config.TIMEZONE)
     scheduled_time = time(hour=0, minute=1, tzinfo=tz)  
     app.job_queue.run_daily(daily_Task, scheduled_time) 
     

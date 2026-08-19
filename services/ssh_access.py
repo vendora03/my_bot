@@ -1,6 +1,5 @@
 import sys, time, json
-from services import database
-from services import logic
+from services import database, logic
 
 task = sys.argv[1] if len(sys.argv) > 1 else None
 key = sys.argv[2] if len(sys.argv) > 2 else None

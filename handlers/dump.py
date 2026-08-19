@@ -28,7 +28,7 @@
   
 #     # Schedule job sekali jalan
 #     context.job_queue.run_once(
-#         callback=scheduled_job,
+#         callback=Handler_Scheduled_Job,
 #         when=waktu.total_seconds(),
 #         data={
 #             "chat_id": ADMIN_IDS,

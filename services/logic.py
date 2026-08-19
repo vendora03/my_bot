@@ -1,24 +1,30 @@
-import random, string, pytz, json, os, logging
+import config, random, string, pytz, json, os, logging, uuid
 from datetime import datetime, timedelta
 from io import BytesIO
 from services.settings import Settings
 from services import database
-from telegram.error import NetworkError, TimedOut, BadRequest
+from telegram.error import NetworkError, TimedOut
 from telegram import BotCommand, BotCommandScopeDefault, BotCommandScopeChat, InlineKeyboardButton, InlineKeyboardMarkup
-from config import (
-    # DEBUG,
-    ADMIN_IDS, 
-    CHANNEL_ID,
-    API_GEMINI, 
-    BACKUP_PATH, 
-    TIMEZONE, 
-    PROMPT, 
-    SETTINGS_SCHEMA,
-    DEFAULT_SETTINGS,
-    BASE_DIR)
+
+# <<<<<<<<<< LOGIC UTIL >>>>>>>>>>>>>>>>>
+def Logic_Encode_Start_Value(context, value: str) -> str:
+    direct = f"refresh:{value}"
+    if len(direct.encode("utf-8")) <= 64:
+        return direct
+
+    token = uuid.uuid4().hex[:8]
+    cache = context.bot_data.setdefault("start_value_cache", {})
+    cache[token] = value
+    return f"refresh:@{token}"
+
+def Logic_Decode_Start_Value(context, payload: str):
+    if payload.startswith("@"):
+        return context.bot_data.get("start_value_cache", {}).get(payload[1:])
+    return payload
+# <<<<<<<<<< LOGIC UTIL >>>>>>>>>>>>>>>>>
 
 async def Logic_Cek_Request(context):
-    MESSAGE_FILE = os.path.join(BASE_DIR, "request_message.json")
+    MESSAGE_FILE = os.path.join(config.BASE_DIR, "request_message.json")
     if not os.path.exists(MESSAGE_FILE):
         return
 
@@ -33,7 +39,7 @@ async def Logic_Cek_Request(context):
             return
 
         if not file_id or file_id == "None" or file_id == "null":
-            for admin_id in ADMIN_IDS:
+            for admin_id in config.ADMIN_IDS:
                 await context.bot.send_message(
                     chat_id=admin_id,
                     text=data["message"],
@@ -50,7 +56,7 @@ async def Logic_Cek_Request(context):
         file_path = file.file_path.lower()
     
         if file_path.endswith((".jpg", ".jpeg", ".png", ".webp")):
-            for admin_id in ADMIN_IDS:
+            for admin_id in config.ADMIN_IDS:
                 await context.bot.send_photo(
                     chat_id=admin_id,
                     photo=file_id,
@@ -59,7 +65,7 @@ async def Logic_Cek_Request(context):
                 )
     
         elif file_path.endswith((".zip", ".rar", ".7z", ".txt", ".pdf")):
-            for admin_id in ADMIN_IDS:
+            for admin_id in config.ADMIN_IDS:
                 await context.bot.send_document(
                     chat_id=admin_id,
                     document=file_id,
@@ -68,7 +74,7 @@ async def Logic_Cek_Request(context):
                 )
     
         else:
-            for admin_id in ADMIN_IDS:
+            for admin_id in config.ADMIN_IDS:
                 await context.bot.send_message(
                     chat_id=admin_id,
                     text=data["message"],
@@ -84,7 +90,7 @@ async def Logic_Cek_Request(context):
         logging.error(f"[MESSAGE REQUEST] {e}")
         
 def Logic_init_settings():
-    for key, value in DEFAULT_SETTINGS.items():
+    for key, value in config.DEFAULT_SETTINGS.items():
         Settings.set(key, value)
         
 # <<<<<<<<<< ERROR Handler >>>>>>>>>>>>>>
@@ -104,7 +110,7 @@ async def Logic_error_handler(update, context):
 
 def Logic_Format_Help():
     lines = ["format penggunaan:"]
-    for key, t in SETTINGS_SCHEMA.items():
+    for key, t in config.SETTINGS_SCHEMA.items():
         if key == "maintenance_start":
             continue
         if t == "bool":
@@ -115,7 +121,7 @@ def Logic_Format_Help():
 
 # <<<<<<<<<< START GENERAL >>>>>>>>>>>>>>
 async def Logic_On_Startup(app):
-    for id_chat in ADMIN_IDS:
+    for id_chat in config.ADMIN_IDS:
         await app.bot.send_message(
             chat_id=id_chat,
             text=f"🚀 Bot Start Up\nTime: {Logic_Get_Time().strftime('%H:%M:%S %d-%m-%Y')}",
@@ -198,7 +204,7 @@ def User_Commands(user: database.User) -> list[BotCommand]:
         )
 
     # Admin command
-    if user.user_id in ADMIN_IDS:
+    if user.user_id in config.ADMIN_IDS:
         commands.extend(
             BotCommand(command=cmd, description=desc)
             for cmd, desc in ADMIN_COMMANDS
@@ -206,28 +212,37 @@ def User_Commands(user: database.User) -> list[BotCommand]:
 
     return commands
  
-def Join_Button():
+def Logic_Join_Button(missing_groups: list[tuple[str, str]], callback_data: str):
     buttons = []
-    
-    raw_group = Settings.get_group()  
-    if not raw_group:
-        return None
-    
-    rows = raw_group.split() 
-        
-    for chat_id in rows[1::2]:
-        if chat_id.startswith("https"):
-            buttons.append([
-                InlineKeyboardButton(
-                    f"Join",
-                    url=chat_id
-                )
-            ])
 
-    if not buttons:
-        return None
-    
+    for i, (_, url) in enumerate(missing_groups, start=1):
+        buttons.append([
+            InlineKeyboardButton(
+                f"Join Group {i}" if len(missing_groups) > 1 else "Join",
+                url=url
+            )
+        ])
+
+    buttons.append([
+        InlineKeyboardButton("🔄 Refresh", callback_data=callback_data)
+    ])
+
     return InlineKeyboardMarkup(buttons)
+
+async def Logic_Get_Missing_Groups(context, user_id: int) -> list[tuple[str, str]]:
+    raw_group = Settings.get_group()
+    if not raw_group:
+        return []
+
+    parts = raw_group.split()
+    pairs = list(zip(parts[0::2], parts[1::2]))  # [(id, url), ...]
+
+    missing = []
+    for chat_id, url in pairs:
+        if not await Is_User_Joined(context, user_id, chat_id):
+            missing.append((chat_id, url))
+
+    return missing
 
 async def Is_User_Joined(app, user_id: int, chat_id) -> bool:
     try:
@@ -240,7 +255,7 @@ async def Is_User_Joined(app, user_id: int, chat_id) -> bool:
             logging.warning(f"[JOIN CHECK] get_chat_member GAGAL: chat_id={chat_id} user_id={user_id} -> {type(e).__name__}: {e}")
         return False
     
-async def Logic_Start_Info(update, context, user_id) -> bool:
+async def Logic_Start_Info(update, context, user_id, action: str = "") -> bool:
     if not Settings.start_info_enabled():
         return True
 
@@ -248,42 +263,29 @@ async def Logic_Start_Info(update, context, user_id) -> bool:
     if not raw_group:
         return True
 
-    groups = raw_group.split()
-    id_groups = groups[0::2]
+    missing = await Logic_Get_Missing_Groups(context, user_id)
 
-    if Settings.is_logging():
-        logging.info(f"[JOIN CHECK] user_id={user_id} | raw_group='{raw_group}' | id_groups={id_groups}")
+    if not missing:
+        return True
 
-    for id_group in id_groups:
-        try:
-            is_joined = await Is_User_Joined(context, user_id, id_group)
-        except Exception as e:
-            if Settings.is_logging():
-                logging.warning(f"[JOIN CHECK] EXCEPTION saat cek id_group={id_group} user_id={user_id} -> {type(e).__name__}: {e}")
-            is_joined = False
+    callback_data = f"refresh:{action}"
+    keyboard = Logic_Join_Button(missing, callback_data)
+    start_info = Settings.get_start_info()
 
-        if Settings.is_logging():
-            logging.info(f"[JOIN CHECK] id_group={id_group} user_id={user_id} -> joined={is_joined}")
+    if "@user" in start_info:
+        await update.effective_message.reply_text(
+            start_info.replace("@user", update.effective_user.first_name),
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
+    else:
+        await update.effective_message.reply_text(
+            start_info,
+            reply_markup=keyboard,
+            parse_mode="HTML"
+        )
 
-        if not is_joined:
-            keyboard = Join_Button()
-            start_info = Settings.get_start_info()
-            if "@user" in start_info:
-                await update.message.reply_text(
-                    start_info.replace("@user", update.effective_user.first_name),
-                    reply_markup=keyboard,
-                    parse_mode="HTML"
-                )
-            else:
-                await update.message.reply_text(
-                    start_info,
-                    reply_markup=keyboard,
-                    parse_mode="HTML"
-                )
-
-            return False
-
-    return True
+    return False
   
       
 # <<<<<<<<<< START ADMIN >>>>>>>>>>>>>>
@@ -291,7 +293,7 @@ async def Logic_Send_Log(context):
     file = "app.log"
     
     if not os.path.exists(file):
-        for admin_id in ADMIN_IDS:
+        for admin_id in config.ADMIN_IDS:
             await context.bot.send_message(
                 chat_id=admin_id,
                 text= "❌ <i>Gagal mendapat file</i>",
@@ -303,13 +305,13 @@ async def Logic_Send_Log(context):
     text = (
         f"<b>📝 Log\nTime:</b> {Logic_Get_Time().strftime('%H:%M:%S %d-%m-%Y')}\n\n"
     )
-    for admin_id in ADMIN_IDS:
+    for admin_id in config.ADMIN_IDS:
         await context.bot.send_document(chat_id=admin_id,document=file,caption=text,parse_mode="HTML")
     
 async def Logic_Send_Backup_To_Admin(context, file, info):
     file.seek(0)
     
-    for admin_id in ADMIN_IDS:
+    for admin_id in config.ADMIN_IDS:
         try:
             await context.bot.send_document(
                 chat_id=admin_id,
@@ -317,7 +319,7 @@ async def Logic_Send_Backup_To_Admin(context, file, info):
                 caption=info,
                 parse_mode="HTML"
             )
-            # if DEBUG:
+            # if config.DEBUG:
             #     logging.info(f"[BACKUP] Sent to admin {admin_id}")
         except Exception as e:
             if Settings.is_logging():
@@ -326,8 +328,8 @@ async def Logic_Send_Backup_To_Admin(context, file, info):
         file.seek(0)
     
 async def Logic_Send_Backup_To_Channel(context, file, info):
-    if not CHANNEL_ID:
-        for admin_id in ADMIN_IDS:
+    if not config.CHANNEL_ID:
+        for admin_id in config.ADMIN_IDS:
             await context.bot.send_message(
                 chat_id=admin_id,
                 text=f"❌ <i>Channel Database Not Found...</i>",
@@ -340,18 +342,18 @@ async def Logic_Send_Backup_To_Channel(context, file, info):
     
     try:
         msg = await context.bot.send_document(
-            chat_id=CHANNEL_ID,
+            chat_id=config.CHANNEL_ID,
             document=file,
             caption=info,
             parse_mode="HTML"
         )
         
         await context.bot.pin_chat_message(
-            chat_id=CHANNEL_ID,
+            chat_id=config.CHANNEL_ID,
             message_id=msg.message_id,
             disable_notification=True  
         )
-        # if DEBUG:
+        # if config.DEBUG:
         #     logging.info(f"[BACKUP] Sent to channel and pinned")
         
     except Exception as e:
@@ -359,8 +361,8 @@ async def Logic_Send_Backup_To_Channel(context, file, info):
             logging.error(f"[BACKUP] Failed to send to channel: {e}")
         
 async def Logic_Restore_From_Channel(app):
-    if not CHANNEL_ID:
-        for admin_id in ADMIN_IDS:
+    if not config.CHANNEL_ID:
+        for admin_id in config.ADMIN_IDS:
             await app.bot.send_message(
                 chat_id=admin_id,
                 text=f"❌ <i>Channel Database Not Found...</i>",
@@ -370,7 +372,7 @@ async def Logic_Restore_From_Channel(app):
             logging.warning("[RESTORE] CHANNEL_ID not set up")
     
     try:
-        chat = await app.bot.get_chat(CHANNEL_ID)
+        chat = await app.bot.get_chat(config.CHANNEL_ID)
         
         if not chat.pinned_message:
             if Settings.is_logging():
@@ -387,12 +389,12 @@ async def Logic_Restore_From_Channel(app):
         file_id = pinned_msg.document.file_id
         new_file = await app.bot.get_file(file_id)
         
-        await new_file.download_to_drive(BACKUP_PATH)
+        await new_file.download_to_drive(config.BACKUP_PATH)
         
         result = Logic_Restore_Backup()
                 
         if result:
-            for admin_id in ADMIN_IDS:
+            for admin_id in config.ADMIN_IDS:
                 await app.bot.send_message(
                     chat_id=admin_id,
                     text=result,
@@ -407,7 +409,7 @@ async def Logic_Backup_To_Channel_Job(context):
     await Logic_Send_Backup_To_Channel(context, file, info)
 
 def Send_Message_Admin(message, file_id):
-    MESSAGE_FILE = os.path.join(BASE_DIR, "request_message.json")
+    MESSAGE_FILE = os.path.join(config.BASE_DIR, "request_message.json")
     data = {"message": message, "file_id": file_id}
     with open(MESSAGE_FILE, "w", encoding="utf-8") as file:
         json.dump(data, file, ensure_ascii=False, indent=4)
@@ -443,13 +445,13 @@ def Logic_Setup_Backup():
 
 # ====== [LOGIC] Restore Backup ========= 
 def Logic_Restore_Backup():
-    if not os.path.exists(BACKUP_PATH):
-        # if DEBUG:
+    if not os.path.exists(config.BACKUP_PATH):
+        # if config.DEBUG:
         #     print("[BACKUP] Backup Aborted: Path Not Found")
         return ""
 
     try:
-        with open(BACKUP_PATH, "r", encoding="utf-8") as f:
+        with open(config.BACKUP_PATH, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         # restore users
@@ -520,9 +522,9 @@ def Logic_Restore_Backup():
         if Settings.is_logging():
             logging.info("[BACKUP] Restore Completed")
 
-        os.remove(BACKUP_PATH)
+        os.remove(config.BACKUP_PATH)
 
-        # if DEBUG:
+        # if config.DEBUG:
         #     print("[BACKUP] backup.json Deleted")
 
         return (
@@ -543,7 +545,7 @@ def Logic_Restore_Backup():
     
 # ====== Get Current Time =============== 
 def Logic_Get_Time():
-    tz = pytz.timezone(TIMEZONE)
+    tz = pytz.timezone(config.TIMEZONE)
     now = datetime.now(tz)
     return now
 
@@ -558,17 +560,17 @@ def Logic_Generate_Tips() -> str:
     if Settings.is_logging():
         logging.info("[Logic] Generate Tips")
         
-    if not API_GEMINI:
+    if not config.API_GEMINI:
         return "Tidak Ada Tips!!!"
         
     from google import genai
     from google.genai.errors import ClientError
     
     try:
-        client = genai.Client(api_key=API_GEMINI)
+        client = genai.Client(api_key=config.API_GEMINI)
 
         response = client.models.generate_content(
-            model="gemini-2.5-flash", contents=PROMPT
+            model="gemini-2.5-flash", contents=config.PROMPT
         )
         
         tips = response.text
@@ -589,7 +591,7 @@ def Logic_Generate_Tips() -> str:
     
 # ====== [LOGIC] Call Broadcast ========= 
 def Logic_Broadcast():
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Admin: Do Broadcast")
         
     return Logic_Get_All_User()
@@ -603,26 +605,26 @@ def Logic_Broadcast():
 
 # ====== Save User ====================== 
 def Logic_Set_User(user_model: database.User):
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Admin: Set User")
         
     database.DB_Save_User(user_model)
     return
 
 def Logic_Get_User(user_id: str) -> database.User:
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Admin: Get User")
         
     return database.DB_Get_User(user_id)
 
 def Logic_Get_All_User():
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Admin: Get All User")
         
     return database.DB_Get_All_User()
 
 def Logic_User_Statistic(users: list[dict]) -> str:
-    tz = pytz.timezone(TIMEZONE)
+    tz = pytz.timezone(config.TIMEZONE)
     now = datetime.now(tz)
 
     total = len(users)
@@ -690,7 +692,7 @@ def Logic_User_Statistic(users: list[dict]) -> str:
 
 # ====== [LOGIC] Save Variable ========== 
 def Logic_Set_Variable(content: str, file_id: str) -> str:
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Admin: Set Variable")
         
     index = database.DB_Cek_Index_Variable() // 100
@@ -709,7 +711,7 @@ def Logic_Set_Variable(content: str, file_id: str) -> str:
 
 # ====== [LOGIC] Get Variable ===========
 def Logic_Get_Variable(access_code: str) -> str:
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Get Content")
         
     return database.DB_Get_Variable(access_code)
@@ -722,7 +724,7 @@ def Logic_Get_Variable(access_code: str) -> str:
 
 # ====== [LOGIC] Save Daily Schedule ====
 def Logic_Set_Daily_Schedule(content: str, file_id: str) -> str:
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Admin: Set Daily Schedule")
     max_attempts = 1000  
 
@@ -736,26 +738,26 @@ def Logic_Set_Daily_Schedule(content: str, file_id: str) -> str:
     
 # ====== [LOGIC] Get Daily Schedule ===== 
 def Logic_Get_Daily_Schedule():
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Bot: Get Daily Schedule")
 
     return database.DB_Get_Daily_Schedule()    
 
 # ====== [LOGIC] Get All Daily Schedule = 
 def Logic_Get_All_Daily_Schedule():
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Get All Daily Schedule")
     return database.DB_Get_All_Daily_Schedule()
 
 # ====== [LOGIC] Show Daily Schedule ==== 
 def Logic_Show_Daily_Schedule(access_code):
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Show Content Daily Schedule")
     return database.DB_Show_Daily_Schedule(access_code)
 
 # ====== [LOGIC] Delete Daily Schedule == 
 def Logic_Delete_Daily_Schedule(access_code):
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Delete Daily Schedule")
     return database.DB_Remove_Daily_Schedule(access_code)
 
@@ -767,7 +769,7 @@ def Logic_Delete_Daily_Schedule(access_code):
 
 # ====== [LOGIC] Assign Template ========    
 def Logic_Assign_Template(template:str,args: list[str]) -> str:
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Assign Template")
     var_count = template.count("<var>")   
     if var_count == 0:
@@ -783,7 +785,7 @@ def Logic_Assign_Template(template:str,args: list[str]) -> str:
 
 # ====== [LOGIC] Save Template ========== 
 def Logic_Set_Template(content: str):
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Admin: Set Template")
     
     max_attempts = 1000  
@@ -798,20 +800,20 @@ def Logic_Set_Template(content: str):
     
 # ====== [LOGIC] Get Template =========== 
 def Logic_Get_Template(access_code):
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Bot: Get Template")
 
     return database.DB_Get_Template(access_code)    
 
 # ====== [LOGIC] Get All Template ======= 
 def Logic_Get_All_Template():
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Get All Template")
     return database.DB_Get_All_Template()
 
 # ====== [LOGIC] Delete Template ======== 
 def Logic_Delete_Template(access_code):
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Delete Template")
     return database.DB_Remove_Template(access_code)
 
@@ -822,7 +824,7 @@ def Logic_Delete_Template(access_code):
 # <<<<<<<<<< START VIP CODE >>>>>>>>>>>>>
 # ====== [LOGIC] Create VIP Access Code ====
 def Logic_Create_VIP_Code() -> str:
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Admin: Create VIP Code")
     
     max_attempts = 1000
@@ -882,7 +884,7 @@ def Logic_Activate_VIP(access_code: str, user_id: str, now):
   
 # ====== [LOGIC] Save VIP Variable =========
 def Logic_Set_VIP_Variable(content: str, file_id: str) -> str:
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Admin: Set VIP Variable")
     
     max_attempts = 1000
@@ -903,7 +905,7 @@ def Logic_Set_VIP_Variable(content: str, file_id: str) -> str:
 
 # ====== [LOGIC] Get VIP Content ===========
 def Logic_Get_VIP_Variable(access_code: str):
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Get VIP Content")
     
     content_data = database.DB_Get_VIP_Variable(access_code)
@@ -922,7 +924,7 @@ def Logic_Get_VIP_Variable(access_code: str):
 
 # ====== [LOGIC] Get All VIP ===============        
 def Logic_Get_All_VIP_Variable():
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Get VIP Welcome Package")
     
     contents = database.DB_Get_All_VIP_Variable()
@@ -934,7 +936,7 @@ def Logic_Get_All_VIP_Variable():
 
 # ====== [LOGIC] Get Latest VIP  ===========      
 def Logic_Get_Latest_VIP_Variable():
-    # if DEBUG:
+    # if config.DEBUG:
     #     print("[Logic] Get VIP Welcome Package")
     
     contents = database.DB_Get_Latest_VIP_Variable()

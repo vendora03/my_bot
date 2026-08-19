@@ -1,10 +1,5 @@
-import datetime
-import pytz
+import datetime, pytz, config 
 from services import database 
-from config import (
-    # DEBUG, 
-    TIMEZONE)
-
 
 def update_User_Activity_Logic(tg_user):
     user_id = tg_user.id
@@ -12,7 +7,7 @@ def update_User_Activity_Logic(tg_user):
     last_name = tg_user.last_name or ""
     username = tg_user.username or "Anonym"
 
-    tz = pytz.timezone(TIMEZONE)
+    tz = pytz.timezone(config.TIMEZONE)
     now = datetime.datetime.now(tz)
 
     user_db = database.DB_Get_User(user_id)
