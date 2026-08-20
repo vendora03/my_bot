@@ -162,7 +162,7 @@ def User_Commands(user: database.User) -> list[BotCommand]:
     BASE_USER_COMMANDS = [
         ("start", "Mulai bot"),
         ("ping", "Uptime Bot"),
-        ("tutorial", "Cek Sendiri Dah"),
+        # ("tutorial", "Cek Sendiri Dah"),
     ]
 
     VIP_COMMANDS = [
